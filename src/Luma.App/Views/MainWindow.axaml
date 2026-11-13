@@ -1,0 +1,194 @@
+﻿<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:c="using:Luma.App.Controls"
+        xmlns:vm="using:Luma.App.ViewModels"
+        xmlns:svc="using:Luma.App.Services"
+        xmlns:v="using:Luma.App.Views"
+        x:Class="Luma.App.Views.MainWindow"
+        x:DataType="vm:ShellViewModel"
+        Title="Luma"
+        Icon="avares://Luma/Assets/luma.ico"
+        Width="1360" Height="860" MinWidth="1000" MinHeight="640"
+        WindowStartupLocation="CenterScreen"
+        WindowDecorations="BorderOnly"
+        Background="{DynamicResource LumaBackgroundBrush}"
+        FontFamily="Inter, Segoe UI, sans-serif">
+
+  <Window.Styles>
+    <Style Selector="Button.nav">
+      <Setter Property="Height" Value="40" />
+      <Setter Property="Padding" Value="12,0" />
+      <Setter Property="CornerRadius" Value="11" />
+      <Setter Property="HorizontalAlignment" Value="Stretch" />
+      <Setter Property="HorizontalContentAlignment" Value="Left" />
+      <Setter Property="Foreground" Value="{DynamicResource LumaTextSecondaryBrush}" />
+      <Setter Property="FontWeight" Value="Medium" />
+    </Style>
+    <Style Selector="Button.nav:pointerover"><Setter Property="Foreground" Value="{DynamicResource LumaTextPrimaryBrush}" /></Style>
+    <Style Selector="Button.nav.active"><Setter Property="Background" Value="{DynamicResource LumaAccentSubtleBrush}" /><Setter Property="Foreground" Value="{DynamicResource LumaTextPrimaryBrush}" /></Style>
+    <Style Selector="Button.nav.active:pointerover"><Setter Property="Background" Value="{DynamicResource LumaAccentSubtleBrush}" /></Style>
+    <Style Selector="Button.nav.active c|Icon"><Setter Property="Foreground" Value="{DynamicResource LumaAccentBrush}" /></Style>
+    <Style Selector="Border.toast">
+      <Setter Property="Background" Value="{DynamicResource LumaElevatedBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource LumaBorderBrush}" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="CornerRadius" Value="14" />
+      <Setter Property="BoxShadow" Value="{StaticResource ShadowPopup}" />
+    </Style>
+  </Window.Styles>
+
+  <Grid x:Name="RootGrid">
+    <Grid ColumnDefinitions="Auto,*">
+
+      <!-- ===================== Sidebar ===================== -->
+      <Border Grid.Column="0" Width="{Binding SidebarWidth}" Background="{DynamicResource LumaSidebarBrush}"
+              BorderBrush="{DynamicResource LumaBorderSubtleBrush}" BorderThickness="0,0,1,0" ClipToBounds="True">
+        <Border.Transitions>
+          <Transitions><DoubleTransition Property="Width" Duration="0:0:0.2" Easing="CubicEaseOut" /></Transitions>
+        </Border.Transitions>
+        <Grid RowDefinitions="Auto,*,Auto">
+
+          <!-- Identity (also a window drag handle) -->
+          <Border x:Name="SidebarDragArea" Grid.Row="0" Height="64" Background="Transparent">
+            <StackPanel Orientation="Horizontal" Spacing="12" Margin="22,0,0,0" VerticalAlignment="Center" IsHitTestVisible="False">
+              <Border Width="32" Height="32" CornerRadius="10">
+                <Border.Background>
+                  <LinearGradientBrush StartPoint="0%,0%" EndPoint="100%,100%">
+                    <GradientStop Color="{DynamicResource LumaAccentSecondaryColor}" Offset="0" />
+                    <GradientStop Color="{DynamicResource LumaAccentColor}" Offset="1" />
+                  </LinearGradientBrush>
+                </Border.Background>
+                <Panel>
+                  <Ellipse Width="16" Height="16" Stroke="White" StrokeThickness="2" Opacity="0.95" />
+                  <Ellipse Width="6" Height="6" Fill="White" />
+                </Panel>
+              </Border>
+              <TextBlock Text="Luma" FontSize="19" FontWeight="SemiBold" LetterSpacing="-0.3" VerticalAlignment="Center"
+                         IsVisible="{Binding !IsSidebarCompact}" />
+            </StackPanel>
+          </Border>
+
+          <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Padding="14,6,14,0">
+            <StackPanel Spacing="22">
+              <StackPanel Spacing="3">
+                <TextBlock Text="Library" Classes="label" Margin="12,0,0,6" IsVisible="{Binding !IsSidebarCompact}" />
+                <ItemsControl ItemsSource="{Binding LibraryItems}">
+                  <ItemsControl.ItemsPanel><ItemsPanelTemplate><StackPanel Spacing="2" /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+                  <ItemsControl.ItemTemplate><DataTemplate x:DataType="vm:NavItemViewModel"><v:NavButton /></DataTemplate></ItemsControl.ItemTemplate>
+                </ItemsControl>
+              </StackPanel>
+              <StackPanel Spacing="3">
+                <TextBlock Text="Sources" Classes="label" Margin="12,0,0,6" IsVisible="{Binding !IsSidebarCompact}" />
+                <Border Classes="divider" Margin="12,0,12,6" IsVisible="{Binding IsSidebarCompact}" />
+                <ItemsControl ItemsSource="{Binding SourceItems}">
+                  <ItemsControl.ItemsPanel><ItemsPanelTemplate><StackPanel Spacing="2" /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+                  <ItemsControl.ItemTemplate><DataTemplate x:DataType="vm:NavItemViewModel"><v:NavButton /></DataTemplate></ItemsControl.ItemTemplate>
+                </ItemsControl>
+              </StackPanel>
+              <StackPanel Spacing="3">
+                <TextBlock Text="System" Classes="label" Margin="12,0,0,6" IsVisible="{Binding !IsSidebarCompact}" />
+                <Border Classes="divider" Margin="12,0,12,6" IsVisible="{Binding IsSidebarCompact}" />
+                <ItemsControl ItemsSource="{Binding SystemItems}">
+                  <ItemsControl.ItemsPanel><ItemsPanelTemplate><StackPanel Spacing="2" /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+                  <ItemsControl.ItemTemplate><DataTemplate x:DataType="vm:NavItemViewModel"><v:NavButton /></DataTemplate></ItemsControl.ItemTemplate>
+                </ItemsControl>
+              </StackPanel>
+            </StackPanel>
+          </ScrollViewer>
+
+          <!-- Footer: identity + collapse -->
+          <Grid Grid.Row="2" Margin="14,10,14,16" ColumnDefinitions="*,Auto">
+            <StackPanel Grid.Column="0" Margin="12,0,0,0" VerticalAlignment="Center" IsVisible="{Binding !IsSidebarCompact}" Spacing="1">
+              <TextBlock Text="Your desktop." FontSize="12" FontWeight="Medium" Foreground="{DynamicResource LumaTextSecondaryBrush}" />
+              <TextBlock Text="Your atmosphere." FontSize="12" Foreground="{DynamicResource LumaTextTertiaryBrush}" />
+              <TextBlock Text="{Binding Version, StringFormat='Version {0}'}" FontSize="11" Foreground="{DynamicResource LumaTextTertiaryBrush}" Margin="0,6,0,0" />
+            </StackPanel>
+            <Button Grid.Column="1" Classes="icon" Command="{Binding ToggleSidebarCommand}" ToolTip.Tip="Collapse or expand the sidebar"
+                    AutomationProperties.Name="Toggle sidebar" HorizontalAlignment="Center" VerticalAlignment="Bottom">
+              <c:Icon Data="{StaticResource Icon.PanelLeft}" Size="18" />
+            </Button>
+          </Grid>
+        </Grid>
+      </Border>
+
+      <!-- ===================== Content ===================== -->
+      <Grid Grid.Column="1" RowDefinitions="Auto,*">
+
+        <!-- Title bar: global search + window controls -->
+        <Border x:Name="TitleBar" Grid.Row="0" Height="56" Background="Transparent">
+          <Grid ColumnDefinitions="*,Auto">
+            <Border Grid.Column="0" x:Name="GlobalSearchBox" Height="38" Width="380" HorizontalAlignment="Left" Margin="32,0,0,0"
+                    CornerRadius="12" Background="{DynamicResource LumaSurfaceBrush}" BorderBrush="{DynamicResource LumaBorderSubtleBrush}" BorderThickness="1">
+              <Grid ColumnDefinitions="Auto,*,Auto" Margin="12,0,10,0">
+                <c:Icon Data="{StaticResource Icon.Search}" Size="16" Foreground="{DynamicResource LumaTextTertiaryBrush}" VerticalAlignment="Center" />
+                <TextBox x:Name="GlobalSearch" Grid.Column="1" Classes="bare" Margin="10,0,6,0" VerticalAlignment="Center"
+                         PlaceholderText="Search all wallpapers" Text="{Binding GlobalSearchText}"
+                         AutomationProperties.Name="Search wallpapers">
+                  <TextBox.KeyBindings>
+                    <KeyBinding Gesture="Enter" Command="{Binding SubmitGlobalSearchCommand}" />
+                  </TextBox.KeyBindings>
+                </TextBox>
+                <Border Grid.Column="2" Classes="pill" VerticalAlignment="Center">
+                  <TextBlock Text="Ctrl K" FontSize="11" Foreground="{DynamicResource LumaTextTertiaryBrush}" />
+                </Border>
+              </Grid>
+            </Border>
+
+            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Top">
+              <Button Classes="caption" x:Name="MinimizeButton" ToolTip.Tip="Minimize" AutomationProperties.Name="Minimize"><c:Icon Data="{StaticResource Icon.Minimize}" Size="14" /></Button>
+              <Button Classes="caption" x:Name="MaximizeButton" ToolTip.Tip="Maximize" AutomationProperties.Name="Maximize or restore">
+                <c:Icon x:Name="MaximizeIcon" Data="{StaticResource Icon.Maximize}" Size="13" />
+              </Button>
+              <Button Classes="caption close" x:Name="CloseButton" ToolTip.Tip="Close" AutomationProperties.Name="Close"><c:Icon Data="{StaticResource Icon.Close}" Size="15" /></Button>
+            </StackPanel>
+          </Grid>
+        </Border>
+
+        <!-- Page host: pages are cached by PageViewLocator -->
+        <TransitioningContentControl x:Name="PageHost" Grid.Row="1" Content="{Binding CurrentPage}">
+          <TransitioningContentControl.PageTransition>
+            <CrossFade Duration="0:0:0.16" />
+          </TransitioningContentControl.PageTransition>
+        </TransitioningContentControl>
+      </Grid>
+    </Grid>
+
+    <!-- ===================== Overlays ===================== -->
+    <Panel IsVisible="{Binding PreviewViewModel, Converter={x:Static ObjectConverters.IsNotNull}}">
+      <v:PreviewOverlay DataContext="{Binding PreviewViewModel}" />
+    </Panel>
+
+    <Border IsVisible="{Binding Dialogs.IsOpen}" Background="{DynamicResource LumaScrimBrush}">
+      <ContentControl Content="{Binding Dialogs.Current}" HorizontalAlignment="Center" VerticalAlignment="Center">
+        <ContentControl.DataTemplates>
+          <DataTemplate DataType="svc:ConfirmDialogViewModel"><v:ConfirmDialogView /></DataTemplate>
+          <DataTemplate DataType="svc:CollectionEditDialogViewModel"><v:CollectionEditDialogView /></DataTemplate>
+          <DataTemplate DataType="svc:CollectionPickerDialogViewModel"><v:CollectionPickerDialogView /></DataTemplate>
+        </ContentControl.DataTemplates>
+      </ContentControl>
+    </Border>
+
+    <ItemsControl ItemsSource="{Binding Toasts.Toasts}" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,28,28" IsHitTestVisible="True">
+      <ItemsControl.ItemsPanel><ItemsPanelTemplate><StackPanel Spacing="10" /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+      <ItemsControl.ItemTemplate>
+        <DataTemplate x:DataType="svc:ToastViewModel">
+          <Border Classes="toast" MinWidth="280" MaxWidth="420" Padding="16,12,10,12">
+            <Grid ColumnDefinitions="Auto,*,Auto,Auto" ColumnSpacing="12">
+              <c:Icon Grid.Column="0" Data="{StaticResource Icon.Check}" Size="18" Foreground="{DynamicResource LumaSuccessBrush}" IsVisible="{Binding IsSuccess}" VerticalAlignment="Center" />
+              <c:Icon Grid.Column="0" Data="{StaticResource Icon.Alert}" Size="18" Foreground="{DynamicResource LumaErrorBrush}" IsVisible="{Binding IsError}" VerticalAlignment="Center" />
+              <c:Icon Grid.Column="0" Data="{StaticResource Icon.Alert}" Size="18" Foreground="{DynamicResource LumaWarningBrush}" IsVisible="{Binding IsWarning}" VerticalAlignment="Center" />
+              <c:Icon Grid.Column="0" Data="{StaticResource Icon.Info}" Size="18" Foreground="{DynamicResource LumaAccentBrush}" IsVisible="{Binding IsInfo}" VerticalAlignment="Center" />
+              <TextBlock Grid.Column="1" Text="{Binding Message}" TextWrapping="Wrap" VerticalAlignment="Center" LineHeight="18" />
+              <Button Grid.Column="2" Classes="secondary" Content="{Binding ActionText}" Command="{Binding InvokeCommand}" IsVisible="{Binding HasAction}" Padding="12,6" FontSize="12" VerticalAlignment="Center" />
+              <Button Grid.Column="3" Classes="icon" Width="28" Height="28" Command="{Binding DismissCommand}" AutomationProperties.Name="Dismiss" VerticalAlignment="Center">
+                <c:Icon Data="{StaticResource Icon.Close}" Size="14" />
+              </Button>
+            </Grid>
+          </Border>
+        </DataTemplate>
+      </ItemsControl.ItemTemplate>
+    </ItemsControl>
+  </Grid>
+</Window>
+
+

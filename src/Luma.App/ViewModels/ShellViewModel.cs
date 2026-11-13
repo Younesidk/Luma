@@ -1,0 +1,238 @@
+using System.Collections.ObjectModel;
+using System.ComponentModel;
+using System.Reflection;
+using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
+using Luma.App.Services;
+using Luma.Core.Models;
+using Luma.Core.Interfaces;
+
+namespace Luma.App.ViewModels;
+
+public sealed partial class NavItemViewModel : ObservableObject
+{
+    public NavItemViewModel(string id, string title, string iconKey, AppPage page, string? sourceId = null)
+    {
+        Id = id;
+        Title = title;
+        IconKey = iconKey;
+        Page = page;
+        SourceId = sourceId;
+    }
+
+    public string Id { get; }
+    public string Title { get; }
+    public string IconKey { get; }
+    public AppPage Page { get; }
+    public string? SourceId { get; }
+
+    [ObservableProperty]
+    private bool _isActive;
+
+    [ObservableProperty]
+    private bool _isCompact;
+
+    public bool ShowLabel => !IsCompact;
+
+    public Action? OpenAction { get; set; }
+
+    [RelayCommand]
+    private void Activate() => OpenAction?.Invoke();
+
+    partial void OnIsCompactChanged(bool value) => OnPropertyChanged(nameof(ShowLabel));
+}
+
+/// <summary>Owns navigation, the persistent sidebar and the overlays (preview, dialogs, toasts).</summary>
+public sealed partial class ShellViewModel : ObservableObject
+{
+    private readonly Dictionary<AppPage, PageViewModel> _pages;
+    private readonly NavigationService _navigation;
+    private readonly ISettingsService _settings;
+    private PageViewModel? _activePage;
+
+    public ShellViewModel(DiscoverViewModel discover, FavoritesViewModel favorites, CollectionsViewModel collections,
+        DownloadsViewModel downloads, HistoryViewModel history, SettingsViewModel settings, NavigationService navigation,
+        PreviewService preview, DialogService dialogs, ToastService toasts, ISettingsService settingsService, ShellStartup startup)
+    {
+        Discover = discover;
+        _navigation = navigation;
+        _settings = settingsService;
+        Preview = preview;
+        Dialogs = dialogs;
+        Toasts = toasts;
+        Startup = startup;
+
+        _pages = new Dictionary<AppPage, PageViewModel>
+        {
+            [AppPage.Discover] = discover,
+            [AppPage.Favorites] = favorites,
+            [AppPage.Collections] = collections,
+            [AppPage.Downloads] = downloads,
+            [AppPage.History] = history,
+            [AppPage.Settings] = settings
+        };
+
+        LibraryItems =
+        [
+            new("discover", "Discover", "Icon.Compass", AppPage.Discover, AppSettings.AllSourcesId),
+            new("favorites", "Favorites", "Icon.Heart", AppPage.Favorites),
+            new("collections", "Collections", "Icon.Layers", AppPage.Collections),
+            new("downloads", "Downloads", "Icon.Download", AppPage.Downloads),
+            new("history", "History", "Icon.History", AppPage.History)
+        ];
+        SourceItems =
+        [
+            new("wallhaven", "Wallhaven", "Icon.Mountain", AppPage.Discover, "wallhaven"),
+            new("openverse", "Openverse", "Icon.Globe", AppPage.Discover, "openverse")
+        ];
+        SystemItems = [new("settings", "Settings", "Icon.Sliders", AppPage.Settings)];
+
+        _currentPage = discover;
+        _isSidebarCompact = settingsService.Current.SidebarCompact;
+        foreach (var item in LibraryItems.Concat(SourceItems).Concat(SystemItems))
+        {
+            item.IsCompact = _isSidebarCompact;
+            var captured = item;
+            item.OpenAction = () => Open(captured);
+        }
+
+        navigation.Requested += (_, request) => Navigate(request);
+        Preview.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName == nameof(PreviewService.Current)) OnPropertyChanged(nameof(PreviewViewModel));
+        };
+        discover.PropertyChanged += OnDiscoverChanged;
+        settingsService.Changed += (_, s) => Avalonia.Threading.Dispatcher.UIThread.Post(() =>
+        {
+            if (IsSidebarCompact != s.SidebarCompact) IsSidebarCompact = s.SidebarCompact;
+        });
+        UpdateActive();
+    }
+
+    public DiscoverViewModel Discover { get; }
+    public PreviewService Preview { get; }
+    public DialogService Dialogs { get; }
+    public ToastService Toasts { get; }
+    public ShellStartup Startup { get; }
+
+    public IReadOnlyList<NavItemViewModel> LibraryItems { get; }
+    public IReadOnlyList<NavItemViewModel> SourceItems { get; }
+    public IReadOnlyList<NavItemViewModel> SystemItems { get; }
+
+    public PreviewViewModel? PreviewViewModel => Preview.Current;
+
+    public string Version { get; } = typeof(ShellViewModel).Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion.Split('+')[0] ?? "1.0.0";
+
+    [ObservableProperty]
+    private PageViewModel _currentPage;
+
+    [ObservableProperty]
+    private bool _isSidebarCompact;
+
+    [ObservableProperty]
+    private string _globalSearchText = string.Empty;
+
+    public double SidebarWidth => IsSidebarCompact ? 76 : 248;
+
+    partial void OnIsSidebarCompactChanged(bool value)
+    {
+        if (_settings.Current.SidebarCompact != value) _settings.Update(s => s.SidebarCompact = value);
+        foreach (var item in LibraryItems.Concat(SourceItems).Concat(SystemItems)) item.IsCompact = value;
+        OnPropertyChanged(nameof(SidebarWidth));
+    }
+
+    public event EventHandler? FocusGlobalSearchRequested;
+
+    public event EventHandler? FocusPageSearchRequested;
+
+    public void RequestFocusGlobalSearch() => FocusGlobalSearchRequested?.Invoke(this, EventArgs.Empty);
+
+    public void RequestFocusPageSearch() => FocusPageSearchRequested?.Invoke(this, EventArgs.Empty);
+
+    /// <summary>Shows the initial page once the window is open.</summary>
+    public async Task StartAsync()
+    {
+        _ = Startup.BeginAsync();
+        await ActivateAsync(CurrentPage);
+    }
+
+    [RelayCommand]
+    private void ToggleSidebar() => IsSidebarCompact = !IsSidebarCompact;
+
+    [RelayCommand]
+    private void Open(NavItemViewModel item)
+    {
+        if (item.Page == AppPage.Discover) Navigate(new NavigationRequest(AppPage.Discover, item.SourceId, null));
+        else Navigate(new NavigationRequest(item.Page, null, null));
+    }
+
+    [RelayCommand]
+    public void NavigateTo(AppPage page) => Navigate(new NavigationRequest(page, null, null));
+
+    [RelayCommand]
+    private void SubmitGlobalSearch()
+    {
+        var text = GlobalSearchText.Trim();
+        if (text.Length == 0) return;
+        Navigate(new NavigationRequest(AppPage.Discover, Discover.SelectedSource.Id, text));
+        GlobalSearchText = string.Empty;
+    }
+
+    [RelayCommand]
+    public void ClosePreview() => Preview.Close();
+
+    public void Refresh()
+    {
+        switch (CurrentPage)
+        {
+            case DiscoverViewModel d: _ = d.RefreshAsync(); break;
+            case FavoritesViewModel f: _ = f.ReloadAsync(); break;
+            case CollectionsViewModel c: _ = c.ReloadAsync(); break;
+            case DownloadsViewModel dl: _ = dl.ReloadAsync(); break;
+            case HistoryViewModel h: _ = h.ReloadAsync(); break;
+        }
+    }
+
+    private void Navigate(NavigationRequest request)
+    {
+        Preview.Close();
+        if (request.Page == AppPage.Discover && (request.SourceId is not null || request.Query is not null))
+            Discover.ApplyRequest(request.SourceId, request.Query);
+
+        var target = _pages[request.Page];
+        if (!ReferenceEquals(target, CurrentPage)) CurrentPage = target;
+        _ = ActivateAsync(target);
+        UpdateActive();
+    }
+
+    private async Task ActivateAsync(PageViewModel page)
+    {
+        if (!ReferenceEquals(_activePage, page))
+        {
+            _activePage?.OnDeactivated();
+            _activePage = page;
+        }
+        await page.OnActivatedAsync();
+    }
+
+    private void OnDiscoverChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(DiscoverViewModel.SelectedSource)) UpdateActive();
+    }
+
+    partial void OnCurrentPageChanged(PageViewModel value) => UpdateActive();
+
+    private void UpdateActive()
+    {
+        string active = CurrentPage switch
+        {
+            DiscoverViewModel d => d.SelectedSource.Id == AppSettings.AllSourcesId ? "discover" : d.SelectedSource.Id,
+            FavoritesViewModel => "favorites",
+            CollectionsViewModel => "collections",
+            DownloadsViewModel => "downloads",
+            HistoryViewModel => "history",
+            _ => "settings"
+        };
+        foreach (var item in LibraryItems.Concat(SourceItems).Concat(SystemItems)) item.IsActive = item.Id == active;
+    }
+}

@@ -1,0 +1,15 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:c="using:Luma.App.Controls"
+             xmlns:vm="using:Luma.App.ViewModels"
+             xmlns:v="using:Luma.App.Views"
+             x:Class="Luma.App.Views.NavButton"
+             x:DataType="vm:NavItemViewModel">
+  <Button Classes="nav" Classes.active="{Binding IsActive}" Command="{Binding ActivateCommand}"
+          ToolTip.Tip="{Binding Title}" AutomationProperties.Name="{Binding Title}">
+    <Grid ColumnDefinitions="22,*">
+      <c:Icon x:Name="NavIcon" Data="{Binding IconKey, Converter={x:Static v:IconKeyConverter.Instance}}" Size="19" HorizontalAlignment="Left" VerticalAlignment="Center" />
+      <TextBlock Grid.Column="1" Text="{Binding Title}" Margin="12,0,0,0" VerticalAlignment="Center" IsVisible="{Binding ShowLabel}" />
+    </Grid>
+  </Button>
+</UserControl>

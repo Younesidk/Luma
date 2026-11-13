@@ -1,0 +1,193 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:c="using:Luma.App.Controls"
+             xmlns:vm="using:Luma.App.ViewModels"
+             x:Class="Luma.App.Views.SettingsView"
+             x:DataType="vm:SettingsViewModel">
+
+  <UserControl.Styles>
+    <Style Selector="Button.swatch">
+      <Setter Property="Width" Value="30" /><Setter Property="Height" Value="30" /><Setter Property="Padding" Value="0" />
+      <Setter Property="CornerRadius" Value="15" /><Setter Property="BorderThickness" Value="2" /><Setter Property="BorderBrush" Value="Transparent" />
+    </Style>
+    <Style Selector="Button.swatch.selected"><Setter Property="BorderBrush" Value="{DynamicResource LumaTextPrimaryBrush}" /></Style>
+    <Style Selector="Button.swatch:pointerover"><Setter Property="BorderBrush" Value="{DynamicResource LumaTextTertiaryBrush}" /></Style>
+    <Style Selector="Button.swatch.selected:pointerover"><Setter Property="BorderBrush" Value="{DynamicResource LumaTextPrimaryBrush}" /></Style>
+  </UserControl.Styles>
+
+  <ScrollViewer VerticalScrollBarVisibility="Auto">
+    <StackPanel Margin="32,4,32,48" Spacing="32" MaxWidth="820" HorizontalAlignment="Left">
+
+      <StackPanel Spacing="4">
+        <TextBlock Text="Settings" Classes="display" />
+        <TextBlock Text="Make Luma feel like yours." Classes="secondary" FontSize="14" />
+      </StackPanel>
+
+      <!-- ================= Appearance ================= -->
+      <StackPanel>
+        <TextBlock Text="Appearance" Classes="group-title" />
+        <Border Classes="card"><StackPanel>
+          <c:SettingRow Heading="Theme" Description="Dark is the default. Match system follows your operating system.">
+            <ComboBox Width="190" ItemsSource="{Binding ThemeOptions}" SelectedItem="{Binding SelectedTheme}" AutomationProperties.Name="Theme" />
+          </c:SettingRow>
+          <c:SettingRow Heading="Accent colour" Description="Used for highlights, buttons and the active sidebar item.">
+            <ItemsControl ItemsSource="{Binding Accents}">
+              <ItemsControl.ItemsPanel><ItemsPanelTemplate><StackPanel Orientation="Horizontal" Spacing="8" /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="vm:AccentSwatchViewModel">
+                  <Button Classes="swatch" Classes.selected="{Binding IsSelected}" Background="{Binding Brush}" Command="{Binding SelectCommand}"
+                          ToolTip.Tip="{Binding Name}" AutomationProperties.Name="{Binding Name}" />
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </c:SettingRow>
+          <c:SettingRow Heading="Gallery density" Description="Compact fits more wallpapers on screen.">
+            <ComboBox Width="190" ItemsSource="{Binding DensityOptions}" SelectedItem="{Binding SelectedDensity}" AutomationProperties.Name="Gallery density" />
+          </c:SettingRow>
+          <c:SettingRow Heading="Compact sidebar" Description="Show only icons in the sidebar.">
+            <ToggleSwitch IsChecked="{Binding SidebarCompact}" OnContent="" OffContent="" AutomationProperties.Name="Compact sidebar" />
+          </c:SettingRow>
+        </StackPanel></Border>
+      </StackPanel>
+
+      <!-- ================= Downloads ================= -->
+      <StackPanel>
+        <TextBlock Text="Downloads" Classes="group-title" />
+        <Border Classes="card"><StackPanel>
+          <c:SettingRow Heading="Download location" Description="{Binding DownloadDirectoryText}" Stacked="True">
+            <StackPanel Orientation="Horizontal" Spacing="8">
+              <Button Classes="secondary" Content="Choose folder…" Command="{Binding ChooseDownloadFolderCommand}" />
+              <Button Classes="secondary" Content="Open" Command="{Binding OpenDownloadFolderCommand}" />
+              <Button Classes="secondary" Content="Use default" Command="{Binding ResetDownloadFolderCommand}" IsVisible="{Binding UsesCustomDownloadDirectory}" />
+            </StackPanel>
+          </c:SettingRow>
+          <c:SettingRow Heading="Confirm before deleting files" Description="Always ask before a downloaded file is permanently removed from disk.">
+            <ToggleSwitch IsChecked="{Binding ConfirmBeforeDelete}" OnContent="" OffContent="" AutomationProperties.Name="Confirm before deleting files" />
+          </c:SettingRow>
+          <c:SettingRow Heading="Image format" Description="Luma saves wallpapers exactly as the source provides them, so there is no quality loss from re-encoding." />
+        </StackPanel></Border>
+      </StackPanel>
+
+      <!-- ================= Providers ================= -->
+      <StackPanel>
+        <TextBlock Text="Providers" Classes="group-title" />
+        <Border Classes="card"><StackPanel>
+          <ItemsControl ItemsSource="{Binding ProviderStatuses}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="vm:ProviderStatusViewModel">
+                <c:SettingRow Heading="{Binding Name}" Description="{Binding Limits}">
+                  <StackPanel Orientation="Horizontal" Spacing="14">
+                    <StackPanel Spacing="1" VerticalAlignment="Center" MaxWidth="260">
+                      <TextBlock Text="{Binding StatusText}" FontSize="12" HorizontalAlignment="Right" TextAlignment="Right" TextWrapping="Wrap"
+                                 Foreground="{DynamicResource LumaTextSecondaryBrush}" />
+                      <TextBlock Text="{Binding RateInfo}" FontSize="11" HorizontalAlignment="Right" Foreground="{DynamicResource LumaTextTertiaryBrush}" IsVisible="{Binding HasRateInfo}" />
+                    </StackPanel>
+                    <Button Classes="secondary" Content="Check" Command="{Binding CheckCommand}" IsEnabled="{Binding !IsChecking}" Padding="14,7" />
+                    <ToggleSwitch IsChecked="{Binding IsEnabled}" OnContent="" OffContent="" AutomationProperties.Name="{Binding Name}" />
+                  </StackPanel>
+                </c:SettingRow>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+          <c:SettingRow Heading="Wallhaven API key" Description="Optional. A key unlocks explicit content and your account's settings. It is stored in settings.json on this computer and is only ever sent to wallhaven.cc as a request header." Stacked="True">
+            <TextBox Text="{Binding WallhavenApiKey}" PasswordChar="●" PlaceholderText="Paste your key from wallhaven.cc/settings/account" AutomationProperties.Name="Wallhaven API key" />
+          </c:SettingRow>
+          <c:SettingRow Heading="Openverse credentials" Description="Optional. Anonymous use allows 20 requests per minute, 200 per day, and 240 results per search. Register an application at api.openverse.org to raise those limits." Stacked="True">
+            <StackPanel Spacing="8">
+              <TextBox Text="{Binding OpenverseClientId}" PlaceholderText="Client ID" AutomationProperties.Name="Openverse client id" />
+              <TextBox Text="{Binding OpenverseClientSecret}" PasswordChar="●" PlaceholderText="Client secret" AutomationProperties.Name="Openverse client secret" />
+            </StackPanel>
+          </c:SettingRow>
+        </StackPanel></Border>
+      </StackPanel>
+
+      <!-- ================= Wallpaper ================= -->
+      <StackPanel>
+        <TextBlock Text="Wallpaper" Classes="group-title" />
+        <Border Classes="card"><StackPanel>
+          <c:SettingRow Heading="This computer" Description="{Binding PlatformNote}">
+            <TextBlock Text="{Binding PlatformSummary}" Classes="secondary" TextWrapping="Wrap" MaxWidth="320" TextAlignment="Right" />
+          </c:SettingRow>
+          <c:SettingRow Heading="Default fit" Description="How wallpapers are laid out on screen when you apply them.">
+            <ComboBox Width="190" ItemsSource="{Binding FitOptions}" SelectedItem="{Binding SelectedFit}" IsEnabled="{Binding CanApplyWallpapers}" AutomationProperties.Name="Default fit mode" />
+          </c:SettingRow>
+          <c:SettingRow Heading="Default source" Description="What Discover shows when Luma starts.">
+            <ComboBox Width="190" ItemsSource="{Binding SourceOptions}" SelectedItem="{Binding SelectedDefaultSource}" AutomationProperties.Name="Default source" />
+          </c:SettingRow>
+          <c:SettingRow Heading="Automatic rotation" Description="{Binding RotationStatus}">
+            <ToggleSwitch IsChecked="{Binding RotationEnabled}" OnContent="" OffContent="" IsEnabled="{Binding CanApplyWallpapers}" AutomationProperties.Name="Automatic rotation" />
+          </c:SettingRow>
+          <c:SettingRow Heading="Change every" Description="Rotation uses wallpapers you already downloaded, so it never needs the network.">
+            <ComboBox Width="190" ItemsSource="{Binding IntervalOptions}" SelectedItem="{Binding SelectedInterval}" AutomationProperties.Name="Rotation interval" />
+          </c:SettingRow>
+          <c:SettingRow Heading="Rotate through">
+            <ComboBox Width="230" ItemsSource="{Binding RotationSourceOptions}" SelectedItem="{Binding SelectedRotationSource}" AutomationProperties.Name="Rotation source" />
+          </c:SettingRow>
+          <c:SettingRow Heading="Collection" IsVisible="{Binding ShowRotationCollection}">
+            <ComboBox Width="230" ItemsSource="{Binding CollectionOptions}" SelectedItem="{Binding SelectedRotationCollection}" AutomationProperties.Name="Rotation collection" />
+          </c:SettingRow>
+          <c:SettingRow Heading="Random order" Description="Never repeats the current wallpaper while there are other choices. Off walks through them in order.">
+            <ToggleSwitch IsChecked="{Binding RotationRandom}" OnContent="" OffContent="" AutomationProperties.Name="Random order" />
+          </c:SettingRow>
+          <c:SettingRow Heading="Change wallpaper now" IsEnabled="{Binding CanApplyWallpapers}">
+            <Button Classes="secondary" Command="{Binding RotateNowCommand}">
+              <StackPanel Orientation="Horizontal" Spacing="8"><c:Icon Data="{StaticResource Icon.Shuffle}" Size="15" /><TextBlock Text="Rotate now" /></StackPanel>
+            </Button>
+          </c:SettingRow>
+        </StackPanel></Border>
+      </StackPanel>
+
+      <!-- ================= Performance ================= -->
+      <StackPanel>
+        <TextBlock Text="Performance" Classes="group-title" />
+        <Border Classes="card"><StackPanel>
+          <c:SettingRow Heading="Graphics" Description="{Binding RenderingNote}">
+            <ComboBox Width="230" ItemsSource="{Binding RenderingOptions}" SelectedItem="{Binding SelectedRendering}" AutomationProperties.Name="Graphics mode" />
+          </c:SettingRow>
+          <c:SettingRow Heading="Thumbnail cache size" Description="Thumbnails are kept on disk so browsing is instant next time. Older ones are removed first.">
+            <StackPanel Orientation="Horizontal" Spacing="14">
+              <Slider Width="180" Minimum="64" Maximum="2048" SmallChange="64" LargeChange="256" TickFrequency="64" IsSnapToTickEnabled="True" Value="{Binding ThumbnailCacheMegabytes}" AutomationProperties.Name="Thumbnail cache size" />
+              <TextBlock Text="{Binding ThumbnailCacheText}" Width="70" TextAlignment="Right" VerticalAlignment="Center" Classes="secondary" />
+            </StackPanel>
+          </c:SettingRow>
+          <c:SettingRow Heading="Thumbnails kept in memory" Description="Fewer thumbnails use less RAM; more makes scrolling back smoother.">
+            <StackPanel Orientation="Horizontal" Spacing="14">
+              <Slider Width="180" Minimum="30" Maximum="400" SmallChange="10" LargeChange="50" TickFrequency="10" IsSnapToTickEnabled="True" Value="{Binding MemoryCacheItems}" AutomationProperties.Name="Thumbnails kept in memory" />
+              <TextBlock Text="{Binding MemoryCacheItemsText}" Width="110" TextAlignment="Right" VerticalAlignment="Center" Classes="secondary" />
+            </StackPanel>
+          </c:SettingRow>
+          <c:SettingRow Heading="Simultaneous downloads">
+            <StackPanel Orientation="Horizontal" Spacing="14">
+              <Slider Width="180" Minimum="1" Maximum="8" SmallChange="1" LargeChange="1" TickFrequency="1" IsSnapToTickEnabled="True" Value="{Binding MaxConcurrentDownloads}" AutomationProperties.Name="Simultaneous downloads" />
+              <TextBlock Text="{Binding MaxConcurrentDownloadsText}" Width="110" TextAlignment="Right" VerticalAlignment="Center" Classes="secondary" />
+            </StackPanel>
+          </c:SettingRow>
+          <c:SettingRow Heading="Clear cache" Description="{Binding CacheSizeText}">
+            <Button Classes="secondary" Content="Clear thumbnail cache" Command="{Binding ClearCacheCommand}" />
+          </c:SettingRow>
+          <c:SettingRow Heading="Memory" Description="{Binding MemoryUsageText}" />
+        </StackPanel></Border>
+      </StackPanel>
+
+      <!-- ================= Application ================= -->
+      <StackPanel>
+        <TextBlock Text="About Luma" Classes="group-title" />
+        <Border Classes="card"><StackPanel>
+          <c:SettingRow Heading="Luma" Description="Your desktop. Your atmosphere. A lightweight wallpaper manager for personal use.">
+            <TextBlock Text="{Binding Version, StringFormat='Version {0}'}" Classes="secondary" />
+          </c:SettingRow>
+          <c:SettingRow Heading="Data folder" Description="{Binding DataDirectory}">
+            <Button Classes="secondary" Content="Open" Command="{Binding OpenDataFolderCommand}" />
+          </c:SettingRow>
+          <c:SettingRow Heading="Logs" Description="{Binding LogsDirectory}">
+            <Button Classes="secondary" Content="Open" Command="{Binding OpenLogsFolderCommand}" />
+          </c:SettingRow>
+          <c:SettingRow Heading="Reset settings" Description="Restores every option above to its default. Favorites, collections and downloaded files are kept.">
+            <Button Classes="secondary danger-ghost" Content="Reset…" Command="{Binding ResetSettingsCommand}" />
+          </c:SettingRow>
+        </StackPanel></Border>
+      </StackPanel>
+    </StackPanel>
+  </ScrollViewer>
+</UserControl>
+

@@ -1,0 +1,36 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:c="using:Luma.App.Controls"
+             xmlns:vm="using:Luma.App.ViewModels"
+             x:Class="Luma.App.Views.FeaturedHero"
+             x:DataType="vm:DiscoverViewModel">
+  <Border Height="300" CornerRadius="22" ClipToBounds="True" Background="{DynamicResource LumaSkeletonBrush}" BoxShadow="{StaticResource ShadowCard}">
+    <Grid>
+      <c:ThumbnailImage Source="{Binding FeaturedImageSource}" DecodeWidth="1500" />
+      <Border>
+        <Border.Background>
+          <LinearGradientBrush StartPoint="0%,50%" EndPoint="100%,50%">
+            <GradientStop Color="#E605070C" Offset="0" />
+            <GradientStop Color="#8005070C" Offset="0.45" />
+            <GradientStop Color="#00000000" Offset="0.85" />
+          </LinearGradientBrush>
+        </Border.Background>
+      </Border>
+      <StackPanel VerticalAlignment="Bottom" HorizontalAlignment="Left" Margin="36,0,36,34" Spacing="10" MaxWidth="520">
+        <Border Background="#33FFFFFF" CornerRadius="12" Padding="11,4" HorizontalAlignment="Left">
+          <TextBlock Text="Featured" FontSize="11" FontWeight="SemiBold" Foreground="#F3F3FA" />
+        </Border>
+        <TextBlock Text="{Binding FeaturedHeading}" FontSize="30" FontWeight="SemiBold" LetterSpacing="-0.6" Foreground="#FFFFFF" TextWrapping="Wrap" MaxLines="2" TextTrimming="CharacterEllipsis" />
+        <TextBlock Text="{Binding FeaturedDetail}" FontSize="13" Foreground="#CCF3F3FA" />
+        <StackPanel Orientation="Horizontal" Spacing="10" Margin="0,8,0,0">
+          <Button Classes="primary" Command="{Binding Featured.OpenCommand}" Height="42">
+            <StackPanel Orientation="Horizontal" Spacing="8"><c:Icon Data="{StaticResource Icon.Play}" Size="14" IsFilled="True" /><TextBlock Text="View wallpaper" /></StackPanel>
+          </Button>
+          <Button Classes="glass" Width="42" Height="42" CornerRadius="21" Command="{Binding Featured.ToggleFavoriteCommand}" ToolTip.Tip="Favorite" AutomationProperties.Name="Toggle favorite">
+            <c:Icon Data="{StaticResource Icon.Heart}" Size="17" IsFilled="{Binding Featured.IsFavorite}" />
+          </Button>
+        </StackPanel>
+      </StackPanel>
+    </Grid>
+  </Border>
+</UserControl>

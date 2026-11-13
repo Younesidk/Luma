@@ -1,0 +1,25 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:c="using:Luma.App.Controls"
+             xmlns:svc="using:Luma.App.Services"
+             x:Class="Luma.App.Views.ConfirmDialogView"
+             x:DataType="svc:ConfirmDialogViewModel">
+  <Border Classes="popup" Width="440" Padding="28" CornerRadius="20" Background="{DynamicResource LumaDialogBrush}">
+    <StackPanel Spacing="22">
+      <StackPanel Spacing="10">
+        <StackPanel Orientation="Horizontal" Spacing="12">
+          <Border Width="36" Height="36" CornerRadius="12" Background="{DynamicResource LumaErrorSubtleBrush}" IsVisible="{Binding IsDestructive}">
+            <c:Icon Data="{StaticResource Icon.Alert}" Size="18" Foreground="{DynamicResource LumaErrorBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+          </Border>
+          <TextBlock Text="{Binding Title}" FontSize="18" FontWeight="SemiBold" VerticalAlignment="Center" TextWrapping="Wrap" />
+        </StackPanel>
+        <TextBlock Text="{Binding Message}" Classes="secondary" TextWrapping="Wrap" LineHeight="21" />
+      </StackPanel>
+      <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="10">
+        <Button x:Name="CancelButton" Classes="secondary" Content="Cancel" Command="{Binding CancelDialogCommand}" />
+        <Button x:Name="ConfirmButton" Classes="primary" Content="{Binding ConfirmText}" Command="{Binding ConfirmCommand}" IsVisible="{Binding IsNotDestructive}" />
+        <Button Classes="danger" Content="{Binding ConfirmText}" Command="{Binding ConfirmCommand}" IsVisible="{Binding IsDestructive}" />
+      </StackPanel>
+    </StackPanel>
+  </Border>
+</UserControl>

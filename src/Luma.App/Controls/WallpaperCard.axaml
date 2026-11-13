@@ -1,0 +1,137 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:c="using:Luma.App.Controls"
+             xmlns:vm="using:Luma.App.ViewModels"
+             x:Class="Luma.App.Controls.WallpaperCard"
+             x:DataType="vm:WallpaperItemViewModel">
+
+  <UserControl.Styles>
+    <Style Selector="Button.card">
+      <Setter Property="Padding" Value="0" />
+      <Setter Property="CornerRadius" Value="14" />
+      <Setter Property="BorderThickness" Value="0" />
+      <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+      <Setter Property="VerticalContentAlignment" Value="Stretch" />
+      <Setter Property="Background" Value="{DynamicResource LumaSkeletonBrush}" />
+      <Setter Property="RenderTransform" Value="scale(1)" />
+      <Setter Property="Transitions">
+        <Transitions>
+          <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.18" Easing="CubicEaseOut" />
+        </Transitions>
+      </Setter>
+    </Style>
+    <Style Selector="Button.card:pointerover">
+      <Setter Property="RenderTransform" Value="scale(1.018)" />
+      <Setter Property="Background" Value="{DynamicResource LumaSkeletonBrush}" />
+    </Style>
+    <Style Selector="Button.card:focus-visible /template/ Border#PART_Root">
+      <Setter Property="BorderThickness" Value="2" />
+    </Style>
+    <Style Selector="Button.card:pressed"><Setter Property="Background" Value="{DynamicResource LumaSkeletonBrush}" /><Setter Property="RenderTransform" Value="scale(1.004)" /></Style>
+
+    <!-- Everything that is revealed on hover/focus -->
+    <Style Selector="Border.reveal, StackPanel.reveal, Grid.reveal">
+      <Setter Property="Opacity" Value="0" />
+      <Setter Property="Transitions">
+        <Transitions><DoubleTransition Property="Opacity" Duration="0:0:0.16" /></Transitions>
+      </Setter>
+    </Style>
+    <Style Selector="Button.card:pointerover Border.reveal, Button.card:pointerover StackPanel.reveal, Button.card:pointerover Grid.reveal, Button.card:focus-within Border.reveal, Button.card:focus-within StackPanel.reveal, Button.card:focus-within Grid.reveal">
+      <Setter Property="Opacity" Value="1" />
+    </Style>
+
+    <Style Selector="Button.heart">
+      <Setter Property="Opacity" Value="0" />
+      <Setter Property="Transitions">
+        <Transitions><DoubleTransition Property="Opacity" Duration="0:0:0.16" /></Transitions>
+      </Setter>
+    </Style>
+    <Style Selector="Button.card:pointerover Button.heart, Button.card:focus-within Button.heart, Button.heart.fav">
+      <Setter Property="Opacity" Value="1" />
+    </Style>
+    <Style Selector="Button.heart.fav"><Setter Property="Foreground" Value="#FF7A93" /></Style>
+  </UserControl.Styles>
+
+  <Button Classes="card" Command="{Binding OpenCommand}" ClipToBounds="True" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
+          AutomationProperties.Name="{Binding Title}"
+          ToolTip.Tip="{Binding Title}">
+    <Button.ContextMenu>
+      <ContextMenu>
+        <MenuItem Header="Open preview" Command="{Binding OpenCommand}" />
+        <MenuItem Header="Set as wallpaper" Command="{Binding ApplyCommand}" />
+        <MenuItem Header="Download" Command="{Binding DownloadCommand}" IsEnabled="{Binding CanDownload}" />
+        <Separator />
+        <MenuItem Header="Add or remove favorite" Command="{Binding ToggleFavoriteCommand}" />
+        <MenuItem Header="Add to collection…" Command="{Binding AddToCollectionCommand}" />
+        <MenuItem Header="{Binding RemoveLabel}" Command="{Binding RemoveCommand}" IsVisible="{Binding CanRemove}" />
+        <Separator />
+        <MenuItem Header="Open source page" Command="{Binding OpenSourceCommand}" />
+      </ContextMenu>
+    </Button.ContextMenu>
+
+    <Grid>
+      <c:ThumbnailImage x:Name="Thumb" Source="{Binding ThumbnailSource}" FallbackSource="{Binding ThumbnailFallbackSource}" DecodeWidth="420" />
+
+      <!-- Failed to load -->
+      <StackPanel IsVisible="{Binding #Thumb.IsFailed}" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="6" Opacity="0.7">
+        <c:Icon Data="{StaticResource Icon.Image}" Size="26" Foreground="{DynamicResource LumaTextTertiaryBrush}" HorizontalAlignment="Center" />
+        <TextBlock Text="Preview unavailable" Classes="meta" HorizontalAlignment="Center" />
+      </StackPanel>
+
+      <!-- Readability scrim, bottom -->
+      <Border Classes="reveal" VerticalAlignment="Bottom" Height="96" IsHitTestVisible="False">
+        <Border.Background>
+          <LinearGradientBrush StartPoint="0%,0%" EndPoint="0%,100%">
+            <GradientStop Color="#00000000" Offset="0" />
+            <GradientStop Color="#CC05070C" Offset="1" />
+          </LinearGradientBrush>
+        </Border.Background>
+      </Border>
+      <Border Classes="reveal" VerticalAlignment="Top" Height="64" IsHitTestVisible="False">
+        <Border.Background>
+          <LinearGradientBrush StartPoint="0%,0%" EndPoint="0%,100%">
+            <GradientStop Color="#8005070C" Offset="0" />
+            <GradientStop Color="#00000000" Offset="1" />
+          </LinearGradientBrush>
+        </Border.Background>
+      </Border>
+
+      <!-- Info, bottom-left -->
+      <StackPanel Classes="reveal" VerticalAlignment="Bottom" HorizontalAlignment="Left" Margin="14,0,0,12" Spacing="2" IsHitTestVisible="False">
+        <TextBlock Text="{Binding ProviderName}" FontSize="11" FontWeight="Medium" Foreground="#B8F3F3FA" />
+        <TextBlock Text="{Binding ShortResolutionText}" FontSize="13" FontWeight="SemiBold" Foreground="#FFFFFF" IsVisible="{Binding HasResolution}" />
+      </StackPanel>
+
+      <!-- Actions, bottom-right -->
+      <StackPanel Classes="reveal" Orientation="Horizontal" Spacing="6" VerticalAlignment="Bottom" HorizontalAlignment="Right" Margin="0,0,10,10">
+        <Button Classes="glass" Command="{Binding DownloadCommand}" IsEnabled="{Binding CanDownload}"
+                ToolTip.Tip="Download" AutomationProperties.Name="Download wallpaper">
+          <c:Icon Data="{StaticResource Icon.Download}" Size="16" />
+        </Button>
+        <Button Classes="glass" Command="{Binding ApplyCommand}" ToolTip.Tip="Set as wallpaper" AutomationProperties.Name="Set as wallpaper">
+          <c:Icon Data="{StaticResource Icon.Monitor}" Size="16" />
+        </Button>
+      </StackPanel>
+
+      <!-- Favorite, top-right -->
+      <Button Classes="glass heart" Classes.fav="{Binding IsFavorite}" Command="{Binding ToggleFavoriteCommand}"
+              HorizontalAlignment="Right" VerticalAlignment="Top" Margin="10,10,10,0"
+              ToolTip.Tip="Favorite" AutomationProperties.Name="Toggle favorite">
+        <c:Icon Data="{StaticResource Icon.Heart}" Size="16" IsFilled="{Binding IsFavorite}" />
+      </Button>
+
+      <!-- Downloaded badge, top-left -->
+      <Border IsVisible="{Binding IsDownloaded}" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="10,10,0,0"
+              Background="#8C0B0D16" CornerRadius="12" Padding="8,4" ToolTip.Tip="In your library">
+        <StackPanel Orientation="Horizontal" Spacing="5">
+          <c:Icon Data="{StaticResource Icon.Check}" Size="12" Foreground="{DynamicResource LumaSuccessBrush}" />
+          <TextBlock Text="Saved" FontSize="11" FontWeight="Medium" Foreground="#F3F3FA" />
+        </StackPanel>
+      </Border>
+
+      <!-- Download progress -->
+      <ProgressBar IsVisible="{Binding IsDownloading}" Minimum="0" Maximum="1" Value="{Binding DownloadProgress}"
+                   VerticalAlignment="Bottom" Height="3" CornerRadius="0" Background="#40000000" />
+    </Grid>
+  </Button>
+</UserControl>

@@ -1,0 +1,191 @@
+<ResourceDictionary xmlns="https://github.com/avaloniaui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+  <!-- ===== Non-themed tokens ===== -->
+  <CornerRadius x:Key="RadiusXs">4</CornerRadius>
+  <CornerRadius x:Key="RadiusSm">8</CornerRadius>
+  <CornerRadius x:Key="RadiusMd">12</CornerRadius>
+  <CornerRadius x:Key="RadiusLg">16</CornerRadius>
+  <CornerRadius x:Key="RadiusXl">22</CornerRadius>
+  <CornerRadius x:Key="RadiusPill">999</CornerRadius>
+
+  <x:Double x:Key="FontSizeDisplay">34</x:Double>
+  <x:Double x:Key="FontSizeTitle">24</x:Double>
+  <x:Double x:Key="FontSizeSection">15</x:Double>
+  <x:Double x:Key="FontSizeBody">13</x:Double>
+  <x:Double x:Key="FontSizeMeta">12</x:Double>
+  <x:Double x:Key="FontSizeLabel">11</x:Double>
+
+  <BoxShadows x:Key="ShadowCard">0 8 24 0 #33000000</BoxShadows>
+  <BoxShadows x:Key="ShadowCardHover">0 14 34 0 #55000000</BoxShadows>
+  <BoxShadows x:Key="ShadowPopup">0 16 48 0 #66000000</BoxShadows>
+
+  <ResourceDictionary.ThemeDictionaries>
+
+    <!-- ===== Dark (default) ===== -->
+    <ResourceDictionary x:Key="Dark">
+      <Color x:Key="LumaBackgroundColor">#10131D</Color>
+      <Color x:Key="LumaSidebarColor">#141824</Color>
+      <Color x:Key="LumaSurfaceColor">#191E2B</Color>
+      <Color x:Key="LumaElevatedColor">#202638</Color>
+      <Color x:Key="LumaAccentColor">#8B7CFF</Color>
+      <Color x:Key="LumaAccentSecondaryColor">#A99BFF</Color>
+      <Color x:Key="LumaOnAccentColor">#0F1120</Color>
+      <Color x:Key="LumaTextPrimaryColor">#F3F3FA</Color>
+      <Color x:Key="LumaTextSecondaryColor">#9299AC</Color>
+      <Color x:Key="LumaTextTertiaryColor">#667088</Color>
+      <Color x:Key="LumaBorderColor">#303547</Color>
+      <Color x:Key="LumaBorderSubtleColor">#232839</Color>
+      <Color x:Key="LumaSuccessColor">#65C99A</Color>
+      <Color x:Key="LumaWarningColor">#E8B96C</Color>
+      <Color x:Key="LumaErrorColor">#F07885</Color>
+
+      <SolidColorBrush x:Key="LumaBackgroundBrush" Color="{StaticResource LumaBackgroundColor}" />
+      <SolidColorBrush x:Key="LumaSidebarBrush" Color="{StaticResource LumaSidebarColor}" />
+      <SolidColorBrush x:Key="LumaSurfaceBrush" Color="{StaticResource LumaSurfaceColor}" />
+      <SolidColorBrush x:Key="LumaElevatedBrush" Color="{StaticResource LumaElevatedColor}" />
+      <SolidColorBrush x:Key="LumaAccentBrush" Color="{StaticResource LumaAccentColor}" />
+      <SolidColorBrush x:Key="LumaAccentSecondaryBrush" Color="{StaticResource LumaAccentSecondaryColor}" />
+      <SolidColorBrush x:Key="LumaAccentSubtleBrush" Color="#8B7CFF" Opacity="0.16" />
+      <SolidColorBrush x:Key="LumaOnAccentBrush" Color="{StaticResource LumaOnAccentColor}" />
+      <SolidColorBrush x:Key="LumaTextPrimaryBrush" Color="{StaticResource LumaTextPrimaryColor}" />
+      <SolidColorBrush x:Key="LumaTextSecondaryBrush" Color="{StaticResource LumaTextSecondaryColor}" />
+      <SolidColorBrush x:Key="LumaTextTertiaryBrush" Color="{StaticResource LumaTextTertiaryColor}" />
+      <SolidColorBrush x:Key="LumaBorderBrush" Color="{StaticResource LumaBorderColor}" />
+      <SolidColorBrush x:Key="LumaBorderSubtleBrush" Color="{StaticResource LumaBorderSubtleColor}" />
+      <SolidColorBrush x:Key="LumaSuccessBrush" Color="{StaticResource LumaSuccessColor}" />
+      <SolidColorBrush x:Key="LumaWarningBrush" Color="{StaticResource LumaWarningColor}" />
+      <SolidColorBrush x:Key="LumaErrorBrush" Color="{StaticResource LumaErrorColor}" />
+      <SolidColorBrush x:Key="LumaSuccessSubtleBrush" Color="#65C99A" Opacity="0.14" />
+      <SolidColorBrush x:Key="LumaWarningSubtleBrush" Color="#E8B96C" Opacity="0.14" />
+      <SolidColorBrush x:Key="LumaErrorSubtleBrush" Color="#F07885" Opacity="0.14" />
+      <SolidColorBrush x:Key="LumaHoverBrush" Color="#FFFFFF" Opacity="0.06" />
+      <SolidColorBrush x:Key="LumaPressedBrush" Color="#FFFFFF" Opacity="0.10" />
+      <SolidColorBrush x:Key="LumaSkeletonBrush" Color="#1E2434" />
+      <SolidColorBrush x:Key="LumaScrimBrush" Color="#0A0C14" Opacity="0.72" />
+      <SolidColorBrush x:Key="LumaDialogBrush" Color="#1A1F2E" />
+
+      <!-- Fluent control resource overrides so stock controls match Luma -->
+      <SolidColorBrush x:Key="TextControlBackground" Color="{StaticResource LumaSurfaceColor}" />
+      <SolidColorBrush x:Key="TextControlBackgroundPointerOver" Color="{StaticResource LumaSurfaceColor}" />
+      <SolidColorBrush x:Key="TextControlBackgroundFocused" Color="{StaticResource LumaSurfaceColor}" />
+      <SolidColorBrush x:Key="TextControlBorderBrush" Color="{StaticResource LumaBorderColor}" />
+      <SolidColorBrush x:Key="TextControlBorderBrushPointerOver" Color="#454B62" />
+      <SolidColorBrush x:Key="TextControlBorderBrushFocused" Color="{StaticResource LumaAccentColor}" />
+      <SolidColorBrush x:Key="TextControlForeground" Color="{StaticResource LumaTextPrimaryColor}" />
+      <SolidColorBrush x:Key="TextControlPlaceholderForeground" Color="{StaticResource LumaTextTertiaryColor}" />
+      <SolidColorBrush x:Key="ComboBoxBackground" Color="{StaticResource LumaSurfaceColor}" />
+      <SolidColorBrush x:Key="ComboBoxBackgroundPointerOver" Color="{StaticResource LumaElevatedColor}" />
+      <SolidColorBrush x:Key="ComboBoxBackgroundPressed" Color="{StaticResource LumaElevatedColor}" />
+      <SolidColorBrush x:Key="ComboBoxBackgroundFocused" Color="{StaticResource LumaSurfaceColor}" />
+      <SolidColorBrush x:Key="ComboBoxBorderBrush" Color="{StaticResource LumaBorderColor}" />
+      <SolidColorBrush x:Key="ComboBoxBorderBrushPointerOver" Color="#454B62" />
+      <SolidColorBrush x:Key="ComboBoxBorderBrushPressed" Color="{StaticResource LumaAccentColor}" />
+      <SolidColorBrush x:Key="ComboBoxDropDownBackground" Color="{StaticResource LumaElevatedColor}" />
+      <SolidColorBrush x:Key="ComboBoxDropDownBorderBrush" Color="{StaticResource LumaBorderColor}" />
+      <SolidColorBrush x:Key="ListBoxItemBackgroundPointerOver" Color="#FFFFFF" Opacity="0.06" />
+      <SolidColorBrush x:Key="ListBoxItemBackgroundSelected" Color="#8B7CFF" Opacity="0.20" />
+      <SolidColorBrush x:Key="ListBoxItemBackgroundSelectedPointerOver" Color="#8B7CFF" Opacity="0.26" />
+      <SolidColorBrush x:Key="ToggleSwitchFillOff" Color="#2A3044" />
+      <SolidColorBrush x:Key="ToggleSwitchFillOffPointerOver" Color="#323A52" />
+      <SolidColorBrush x:Key="ToggleSwitchStrokeOff" Color="#4A516A" />
+      <SolidColorBrush x:Key="ToggleSwitchStrokeOffPointerOver" Color="#5A6280" />
+      <SolidColorBrush x:Key="ToggleSwitchKnobFillOff" Color="#AEB4C6" />
+      <SolidColorBrush x:Key="ToggleSwitchKnobFillOn" Color="{StaticResource LumaOnAccentColor}" />
+      <SolidColorBrush x:Key="ToggleSwitchContainerBackground" Color="Transparent" />
+      <SolidColorBrush x:Key="MenuFlyoutPresenterBackground" Color="{StaticResource LumaElevatedColor}" />
+      <SolidColorBrush x:Key="MenuFlyoutPresenterBorderBrush" Color="{StaticResource LumaBorderColor}" />
+      <SolidColorBrush x:Key="FlyoutPresenterBackground" Color="{StaticResource LumaElevatedColor}" />
+      <SolidColorBrush x:Key="FlyoutBorderThemeBrush" Color="{StaticResource LumaBorderColor}" />
+      <SolidColorBrush x:Key="ToolTipBackground" Color="{StaticResource LumaElevatedColor}" />
+      <SolidColorBrush x:Key="ToolTipBorderBrush" Color="{StaticResource LumaBorderColor}" />
+      <SolidColorBrush x:Key="ToolTipForeground" Color="{StaticResource LumaTextPrimaryColor}" />
+      <SolidColorBrush x:Key="ScrollBarThumbFill" Color="#FFFFFF" Opacity="0.20" />
+      <SolidColorBrush x:Key="ScrollBarThumbFillPointerOver" Color="#FFFFFF" Opacity="0.34" />
+      <SolidColorBrush x:Key="ScrollBarThumbFillPressed" Color="#FFFFFF" Opacity="0.46" />
+    </ResourceDictionary>
+
+    <!-- ===== Light ===== -->
+    <ResourceDictionary x:Key="Light">
+      <Color x:Key="LumaBackgroundColor">#F5F6FA</Color>
+      <Color x:Key="LumaSidebarColor">#ECEEF5</Color>
+      <Color x:Key="LumaSurfaceColor">#FFFFFF</Color>
+      <Color x:Key="LumaElevatedColor">#FFFFFF</Color>
+      <Color x:Key="LumaAccentColor">#6C5CE7</Color>
+      <Color x:Key="LumaAccentSecondaryColor">#8A7DF0</Color>
+      <Color x:Key="LumaOnAccentColor">#FFFFFF</Color>
+      <Color x:Key="LumaTextPrimaryColor">#151829</Color>
+      <Color x:Key="LumaTextSecondaryColor">#5D647A</Color>
+      <Color x:Key="LumaTextTertiaryColor">#8C93A7</Color>
+      <Color x:Key="LumaBorderColor">#DADDE8</Color>
+      <Color x:Key="LumaBorderSubtleColor">#E7E9F1</Color>
+      <Color x:Key="LumaSuccessColor">#1D9A63</Color>
+      <Color x:Key="LumaWarningColor">#B67717</Color>
+      <Color x:Key="LumaErrorColor">#D0364B</Color>
+
+      <SolidColorBrush x:Key="LumaBackgroundBrush" Color="{StaticResource LumaBackgroundColor}" />
+      <SolidColorBrush x:Key="LumaSidebarBrush" Color="{StaticResource LumaSidebarColor}" />
+      <SolidColorBrush x:Key="LumaSurfaceBrush" Color="{StaticResource LumaSurfaceColor}" />
+      <SolidColorBrush x:Key="LumaElevatedBrush" Color="{StaticResource LumaElevatedColor}" />
+      <SolidColorBrush x:Key="LumaAccentBrush" Color="{StaticResource LumaAccentColor}" />
+      <SolidColorBrush x:Key="LumaAccentSecondaryBrush" Color="{StaticResource LumaAccentSecondaryColor}" />
+      <SolidColorBrush x:Key="LumaAccentSubtleBrush" Color="#6C5CE7" Opacity="0.12" />
+      <SolidColorBrush x:Key="LumaOnAccentBrush" Color="{StaticResource LumaOnAccentColor}" />
+      <SolidColorBrush x:Key="LumaTextPrimaryBrush" Color="{StaticResource LumaTextPrimaryColor}" />
+      <SolidColorBrush x:Key="LumaTextSecondaryBrush" Color="{StaticResource LumaTextSecondaryColor}" />
+      <SolidColorBrush x:Key="LumaTextTertiaryBrush" Color="{StaticResource LumaTextTertiaryColor}" />
+      <SolidColorBrush x:Key="LumaBorderBrush" Color="{StaticResource LumaBorderColor}" />
+      <SolidColorBrush x:Key="LumaBorderSubtleBrush" Color="{StaticResource LumaBorderSubtleColor}" />
+      <SolidColorBrush x:Key="LumaSuccessBrush" Color="{StaticResource LumaSuccessColor}" />
+      <SolidColorBrush x:Key="LumaWarningBrush" Color="{StaticResource LumaWarningColor}" />
+      <SolidColorBrush x:Key="LumaErrorBrush" Color="{StaticResource LumaErrorColor}" />
+      <SolidColorBrush x:Key="LumaSuccessSubtleBrush" Color="#1D9A63" Opacity="0.12" />
+      <SolidColorBrush x:Key="LumaWarningSubtleBrush" Color="#B67717" Opacity="0.12" />
+      <SolidColorBrush x:Key="LumaErrorSubtleBrush" Color="#D0364B" Opacity="0.10" />
+      <SolidColorBrush x:Key="LumaHoverBrush" Color="#151829" Opacity="0.05" />
+      <SolidColorBrush x:Key="LumaPressedBrush" Color="#151829" Opacity="0.09" />
+      <SolidColorBrush x:Key="LumaSkeletonBrush" Color="#E7E9F2" />
+      <SolidColorBrush x:Key="LumaScrimBrush" Color="#151829" Opacity="0.45" />
+      <SolidColorBrush x:Key="LumaDialogBrush" Color="#FFFFFF" />
+
+      <SolidColorBrush x:Key="TextControlBackground" Color="{StaticResource LumaSurfaceColor}" />
+      <SolidColorBrush x:Key="TextControlBackgroundPointerOver" Color="{StaticResource LumaSurfaceColor}" />
+      <SolidColorBrush x:Key="TextControlBackgroundFocused" Color="{StaticResource LumaSurfaceColor}" />
+      <SolidColorBrush x:Key="TextControlBorderBrush" Color="{StaticResource LumaBorderColor}" />
+      <SolidColorBrush x:Key="TextControlBorderBrushPointerOver" Color="#BFC4D4" />
+      <SolidColorBrush x:Key="TextControlBorderBrushFocused" Color="{StaticResource LumaAccentColor}" />
+      <SolidColorBrush x:Key="TextControlForeground" Color="{StaticResource LumaTextPrimaryColor}" />
+      <SolidColorBrush x:Key="TextControlPlaceholderForeground" Color="{StaticResource LumaTextTertiaryColor}" />
+      <SolidColorBrush x:Key="ComboBoxBackground" Color="{StaticResource LumaSurfaceColor}" />
+      <SolidColorBrush x:Key="ComboBoxBackgroundPointerOver" Color="#F3F4F9" />
+      <SolidColorBrush x:Key="ComboBoxBackgroundPressed" Color="#F3F4F9" />
+      <SolidColorBrush x:Key="ComboBoxBackgroundFocused" Color="{StaticResource LumaSurfaceColor}" />
+      <SolidColorBrush x:Key="ComboBoxBorderBrush" Color="{StaticResource LumaBorderColor}" />
+      <SolidColorBrush x:Key="ComboBoxBorderBrushPointerOver" Color="#BFC4D4" />
+      <SolidColorBrush x:Key="ComboBoxBorderBrushPressed" Color="{StaticResource LumaAccentColor}" />
+      <SolidColorBrush x:Key="ComboBoxDropDownBackground" Color="{StaticResource LumaElevatedColor}" />
+      <SolidColorBrush x:Key="ComboBoxDropDownBorderBrush" Color="{StaticResource LumaBorderColor}" />
+      <SolidColorBrush x:Key="ListBoxItemBackgroundPointerOver" Color="#151829" Opacity="0.05" />
+      <SolidColorBrush x:Key="ListBoxItemBackgroundSelected" Color="#6C5CE7" Opacity="0.14" />
+      <SolidColorBrush x:Key="ListBoxItemBackgroundSelectedPointerOver" Color="#6C5CE7" Opacity="0.20" />
+      <SolidColorBrush x:Key="ToggleSwitchFillOff" Color="#E3E6EF" />
+      <SolidColorBrush x:Key="ToggleSwitchFillOffPointerOver" Color="#D8DCE8" />
+      <SolidColorBrush x:Key="ToggleSwitchStrokeOff" Color="#B4BACB" />
+      <SolidColorBrush x:Key="ToggleSwitchStrokeOffPointerOver" Color="#9AA1B6" />
+      <SolidColorBrush x:Key="ToggleSwitchKnobFillOff" Color="#6B7288" />
+      <SolidColorBrush x:Key="ToggleSwitchKnobFillOn" Color="#FFFFFF" />
+      <SolidColorBrush x:Key="ToggleSwitchContainerBackground" Color="Transparent" />
+      <SolidColorBrush x:Key="MenuFlyoutPresenterBackground" Color="{StaticResource LumaElevatedColor}" />
+      <SolidColorBrush x:Key="MenuFlyoutPresenterBorderBrush" Color="{StaticResource LumaBorderColor}" />
+      <SolidColorBrush x:Key="FlyoutPresenterBackground" Color="{StaticResource LumaElevatedColor}" />
+      <SolidColorBrush x:Key="FlyoutBorderThemeBrush" Color="{StaticResource LumaBorderColor}" />
+      <SolidColorBrush x:Key="ToolTipBackground" Color="#20243A" />
+      <SolidColorBrush x:Key="ToolTipBorderBrush" Color="#20243A" />
+      <SolidColorBrush x:Key="ToolTipForeground" Color="#F3F3FA" />
+      <SolidColorBrush x:Key="ScrollBarThumbFill" Color="#151829" Opacity="0.22" />
+      <SolidColorBrush x:Key="ScrollBarThumbFillPointerOver" Color="#151829" Opacity="0.36" />
+      <SolidColorBrush x:Key="ScrollBarThumbFillPressed" Color="#151829" Opacity="0.48" />
+    </ResourceDictionary>
+
+  </ResourceDictionary.ThemeDictionaries>
+</ResourceDictionary>

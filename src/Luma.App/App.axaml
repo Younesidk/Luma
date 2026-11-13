@@ -1,0 +1,30 @@
+<Application xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="using:Luma.App"
+             x:Class="Luma.App.App"
+             RequestedThemeVariant="Dark">
+
+  <Application.DataTemplates>
+    <local:PageViewLocator />
+  </Application.DataTemplates>
+
+  <Application.Styles>
+    <FluentTheme>
+      <FluentTheme.Palettes>
+        <ColorPaletteResources x:Key="Dark" Accent="#8B7CFF" RegionColor="#10131D" ErrorText="#F07885" />
+        <ColorPaletteResources x:Key="Light" Accent="#6C5CE7" RegionColor="#F5F6FA" ErrorText="#D0364B" />
+      </FluentTheme.Palettes>
+    </FluentTheme>
+    <StyleInclude Source="avares://Luma/Styles/Controls.axaml" />
+    <StyleInclude Source="avares://Luma/Styles/Components.axaml" />
+  </Application.Styles>
+
+  <Application.Resources>
+    <ResourceDictionary>
+      <ResourceDictionary.MergedDictionaries>
+        <ResourceInclude Source="avares://Luma/Styles/Tokens.axaml" />
+        <ResourceInclude Source="avares://Luma/Styles/Icons.axaml" />
+      </ResourceDictionary.MergedDictionaries>
+    </ResourceDictionary>
+  </Application.Resources>
+</Application>

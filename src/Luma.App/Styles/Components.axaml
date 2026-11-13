@@ -1,0 +1,59 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:c="using:Luma.App.Controls">
+
+  <Style Selector="c|EmptyState">
+    <Setter Property="HorizontalAlignment" Value="Center" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+    <Setter Property="Template">
+      <ControlTemplate>
+        <StackPanel Spacing="14" MaxWidth="380" HorizontalAlignment="Center">
+          <Border Width="64" Height="64" CornerRadius="22" HorizontalAlignment="Center" Background="{DynamicResource LumaAccentSubtleBrush}" x:Name="Badge">
+            <c:Icon Data="{TemplateBinding Icon}" Size="28" Foreground="{DynamicResource LumaAccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" x:Name="BadgeIcon" />
+          </Border>
+          <TextBlock Text="{TemplateBinding Heading}" FontSize="19" FontWeight="SemiBold" HorizontalAlignment="Center" TextAlignment="Center" TextWrapping="Wrap" />
+          <TextBlock Text="{TemplateBinding Message}" Classes="secondary" TextAlignment="Center" TextWrapping="Wrap" LineHeight="20" />
+          <ContentPresenter Content="{TemplateBinding Content}" HorizontalAlignment="Center" Margin="0,6,0,0" />
+        </StackPanel>
+      </ControlTemplate>
+    </Setter>
+  </Style>
+  <Style Selector="c|EmptyState[IsDanger=True] /template/ Border#Badge"><Setter Property="Background" Value="{DynamicResource LumaErrorSubtleBrush}" /></Style>
+  <Style Selector="c|EmptyState[IsDanger=True] /template/ c|Icon#BadgeIcon"><Setter Property="Foreground" Value="{DynamicResource LumaErrorBrush}" /></Style>
+
+  <Style Selector="c|SettingRow">
+    <Setter Property="Padding" Value="20,15" />
+    <Setter Property="HorizontalContentAlignment" Value="Right" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
+    <Setter Property="Template">
+      <ControlTemplate>
+        <Border x:Name="Row" Padding="{TemplateBinding Padding}" BorderThickness="0,0,0,1" BorderBrush="{DynamicResource LumaBorderSubtleBrush}">
+          <Grid x:Name="Layout" ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto" ColumnSpacing="24">
+            <StackPanel Grid.Column="0" Spacing="3" VerticalAlignment="Center">
+              <TextBlock Text="{TemplateBinding Heading}" FontWeight="Medium" FontSize="13" TextWrapping="Wrap" />
+              <TextBlock Text="{TemplateBinding Description}" Classes="meta" TextWrapping="Wrap" LineHeight="18"
+                         IsVisible="{Binding Description, RelativeSource={RelativeSource TemplatedParent}, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+            </StackPanel>
+            <ContentPresenter x:Name="Right" Grid.Column="1" Content="{TemplateBinding Content}" ContentTemplate="{TemplateBinding ContentTemplate}"
+                              HorizontalAlignment="Right" VerticalAlignment="Center" />
+          </Grid>
+        </Border>
+      </ControlTemplate>
+    </Setter>
+  </Style>
+  <Style Selector="c|SettingRow[Stacked=True] /template/ ContentPresenter#Right">
+    <Setter Property="Grid.Column" Value="0" />
+    <Setter Property="Grid.Row" Value="1" />
+    <Setter Property="Grid.ColumnSpan" Value="2" />
+    <Setter Property="HorizontalAlignment" Value="Stretch" />
+    <Setter Property="Margin" Value="0,12,0,0" />
+  </Style>
+  <Style Selector="StackPanel > c|SettingRow:nth-last-child(1) /template/ Border#Row"><Setter Property="BorderThickness" Value="0" /></Style>
+
+  <Style Selector="TextBlock.group-title">
+    <Setter Property="FontSize" Value="12" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="Foreground" Value="{DynamicResource LumaTextSecondaryBrush}" />
+    <Setter Property="Margin" Value="4,0,0,10" />
+  </Style>
+</Styles>

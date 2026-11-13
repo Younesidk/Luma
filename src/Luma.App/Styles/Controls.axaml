@@ -1,0 +1,313 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:c="using:Luma.App.Controls">
+
+  <!-- ================= Typography ================= -->
+  <Style Selector="TextBlock">
+    <Setter Property="Foreground" Value="{DynamicResource LumaTextPrimaryBrush}" />
+    <Setter Property="FontSize" Value="{DynamicResource FontSizeBody}" />
+  </Style>
+  <Style Selector="TextBlock.display">
+    <Setter Property="FontSize" Value="{DynamicResource FontSizeDisplay}" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="LetterSpacing" Value="-0.6" />
+  </Style>
+  <Style Selector="TextBlock.title">
+    <Setter Property="FontSize" Value="{DynamicResource FontSizeTitle}" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="LetterSpacing" Value="-0.3" />
+  </Style>
+  <Style Selector="TextBlock.section">
+    <Setter Property="FontSize" Value="{DynamicResource FontSizeSection}" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+  </Style>
+  <Style Selector="TextBlock.body">
+    <Setter Property="FontSize" Value="{DynamicResource FontSizeBody}" />
+  </Style>
+  <Style Selector="TextBlock.secondary">
+    <Setter Property="Foreground" Value="{DynamicResource LumaTextSecondaryBrush}" />
+  </Style>
+  <Style Selector="TextBlock.meta">
+    <Setter Property="FontSize" Value="{DynamicResource FontSizeMeta}" />
+    <Setter Property="Foreground" Value="{DynamicResource LumaTextSecondaryBrush}" />
+  </Style>
+  <Style Selector="TextBlock.label">
+    <Setter Property="FontSize" Value="{DynamicResource FontSizeLabel}" />
+    <Setter Property="FontWeight" Value="Medium" />
+    <Setter Property="Foreground" Value="{DynamicResource LumaTextTertiaryBrush}" />
+  </Style>
+  <Style Selector="SelectableTextBlock">
+    <Setter Property="Foreground" Value="{DynamicResource LumaTextPrimaryBrush}" />
+  </Style>
+
+  <!-- ================= Buttons ================= -->
+  <Style Selector="Button">
+    <Setter Property="Cursor" Value="Hand" />
+    <Setter Property="FocusAdorner" Value="{x:Null}" />
+    <Setter Property="Padding" Value="14,9" />
+    <Setter Property="FontSize" Value="{DynamicResource FontSizeBody}" />
+    <Setter Property="FontWeight" Value="Medium" />
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusSm}" />
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="BorderBrush" Value="Transparent" />
+    <Setter Property="Foreground" Value="{DynamicResource LumaTextPrimaryBrush}" />
+    <Setter Property="HorizontalContentAlignment" Value="Center" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
+    <Setter Property="Template">
+      <ControlTemplate>
+        <Border x:Name="PART_Root"
+                Background="{TemplateBinding Background}"
+                BorderBrush="{TemplateBinding BorderBrush}"
+                BorderThickness="{TemplateBinding BorderThickness}"
+                CornerRadius="{TemplateBinding CornerRadius}"
+                Padding="{TemplateBinding Padding}">
+          <ContentPresenter x:Name="PART_ContentPresenter"
+                            Content="{TemplateBinding Content}"
+                            ContentTemplate="{TemplateBinding ContentTemplate}"
+                            Foreground="{TemplateBinding Foreground}"
+                            FontSize="{TemplateBinding FontSize}"
+                            FontWeight="{TemplateBinding FontWeight}"
+                            HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
+                            VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}"
+                            RecognizesAccessKey="True" />
+        </Border>
+      </ControlTemplate>
+    </Setter>
+    <Setter Property="Transitions">
+      <Transitions>
+        <BrushTransition Property="Background" Duration="0:0:0.12" />
+      </Transitions>
+    </Setter>
+  </Style>
+  <Style Selector="Button:pointerover"><Setter Property="Background" Value="{DynamicResource LumaHoverBrush}" /></Style>
+  <Style Selector="Button:pressed"><Setter Property="Background" Value="{DynamicResource LumaPressedBrush}" /></Style>
+  <Style Selector="Button:disabled"><Setter Property="Opacity" Value="0.42" /></Style>
+  <Style Selector="Button:focus-visible /template/ Border#PART_Root">
+    <Setter Property="BorderBrush" Value="{DynamicResource LumaAccentBrush}" />
+  </Style>
+
+  <!-- Primary -->
+  <Style Selector="Button.primary">
+    <Setter Property="Background" Value="{DynamicResource LumaAccentBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource LumaOnAccentBrush}" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="Padding" Value="18,10" />
+  </Style>
+  <Style Selector="Button.primary:pointerover"><Setter Property="Background" Value="{DynamicResource LumaAccentSecondaryBrush}" /></Style>
+  <Style Selector="Button.primary:pressed"><Setter Property="Background" Value="{DynamicResource LumaAccentSecondaryBrush}" /><Setter Property="Opacity" Value="0.9" /></Style>
+
+  <!-- Secondary (outlined) -->
+  <Style Selector="Button.secondary">
+    <Setter Property="Background" Value="{DynamicResource LumaSurfaceBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource LumaBorderBrush}" />
+  </Style>
+  <Style Selector="Button.secondary:pointerover"><Setter Property="Background" Value="{DynamicResource LumaElevatedBrush}" /><Setter Property="BorderBrush" Value="{DynamicResource LumaTextTertiaryBrush}" /></Style>
+  <Style Selector="Button.secondary:pressed"><Setter Property="Background" Value="{DynamicResource LumaElevatedBrush}" /></Style>
+
+  <!-- Danger -->
+  <Style Selector="Button.danger">
+    <Setter Property="Background" Value="{DynamicResource LumaErrorBrush}" />
+    <Setter Property="Foreground" Value="#10131D" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+  </Style>
+  <Style Selector="Button.danger:pointerover"><Setter Property="Opacity" Value="0.9" /><Setter Property="Background" Value="{DynamicResource LumaErrorBrush}" /></Style>
+  <Style Selector="Button.danger-ghost"><Setter Property="Foreground" Value="{DynamicResource LumaErrorBrush}" /></Style>
+  <Style Selector="Button.danger-ghost:pointerover"><Setter Property="Background" Value="{DynamicResource LumaErrorSubtleBrush}" /></Style>
+
+  <!-- Icon button -->
+  <Style Selector="Button.icon">
+    <Setter Property="Width" Value="36" />
+    <Setter Property="Height" Value="36" />
+    <Setter Property="Padding" Value="0" />
+    <Setter Property="CornerRadius" Value="10" />
+    <Setter Property="Foreground" Value="{DynamicResource LumaTextSecondaryBrush}" />
+  </Style>
+  <Style Selector="Button.icon:pointerover"><Setter Property="Foreground" Value="{DynamicResource LumaTextPrimaryBrush}" /></Style>
+
+  <!-- Round glass button used on top of imagery -->
+  <Style Selector="Button.glass">
+    <Setter Property="Width" Value="34" />
+    <Setter Property="Height" Value="34" />
+    <Setter Property="Padding" Value="0" />
+    <Setter Property="CornerRadius" Value="17" />
+    <Setter Property="Background" Value="#8C0B0D16" />
+    <Setter Property="Foreground" Value="#F3F3FA" />
+  </Style>
+  <Style Selector="Button.glass:pointerover"><Setter Property="Background" Value="#C20B0D16" /></Style>
+  <Style Selector="Button.glass:pressed"><Setter Property="Background" Value="#E00B0D16" /></Style>
+
+  <!-- Window caption buttons -->
+  <Style Selector="Button.caption">
+    <Setter Property="Width" Value="46" />
+    <Setter Property="Height" Value="38" />
+    <Setter Property="Padding" Value="0" />
+    <Setter Property="CornerRadius" Value="0" />
+    <Setter Property="Foreground" Value="{DynamicResource LumaTextSecondaryBrush}" />
+  </Style>
+  <Style Selector="Button.caption.close:pointerover"><Setter Property="Background" Value="#E5484D" /><Setter Property="Foreground" Value="White" /></Style>
+
+  <!-- Chip (ToggleButton) -->
+  <Style Selector="ToggleButton.chip, ToggleButton.segment">
+    <Setter Property="Cursor" Value="Hand" />
+    <Setter Property="FocusAdorner" Value="{x:Null}" />
+    <Setter Property="Padding" Value="13,7" />
+    <Setter Property="FontSize" Value="{DynamicResource FontSizeMeta}" />
+    <Setter Property="FontWeight" Value="Medium" />
+    <Setter Property="Foreground" Value="{DynamicResource LumaTextSecondaryBrush}" />
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderBrush" Value="{DynamicResource LumaBorderBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusPill}" />
+    <Setter Property="HorizontalContentAlignment" Value="Center" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
+    <Setter Property="Template">
+      <ControlTemplate>
+        <Border x:Name="PART_Root" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
+                BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="{TemplateBinding CornerRadius}" Padding="{TemplateBinding Padding}">
+          <ContentPresenter Content="{TemplateBinding Content}" ContentTemplate="{TemplateBinding ContentTemplate}"
+                            Foreground="{TemplateBinding Foreground}" FontSize="{TemplateBinding FontSize}" FontWeight="{TemplateBinding FontWeight}"
+                            HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}" VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}" />
+        </Border>
+      </ControlTemplate>
+    </Setter>
+  </Style>
+  <Style Selector="ToggleButton.chip:pointerover, ToggleButton.segment:pointerover">
+    <Setter Property="Background" Value="{DynamicResource LumaHoverBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource LumaTextPrimaryBrush}" />
+  </Style>
+  <Style Selector="ToggleButton.chip:checked">
+    <Setter Property="Background" Value="{DynamicResource LumaAccentSubtleBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource LumaAccentBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource LumaTextPrimaryBrush}" />
+  </Style>
+  <Style Selector="ToggleButton.chip:checked:pointerover">
+    <Setter Property="Background" Value="{DynamicResource LumaAccentSubtleBrush}" />
+  </Style>
+  <Style Selector="ToggleButton.chip:disabled"><Setter Property="Opacity" Value="0.4" /></Style>
+  <Style Selector="ToggleButton.segment">
+    <Setter Property="BorderBrush" Value="Transparent" />
+    <Setter Property="CornerRadius" Value="9" />
+    <Setter Property="Padding" Value="12,6" />
+  </Style>
+  <Style Selector="ToggleButton.segment:checked">
+    <Setter Property="Background" Value="{DynamicResource LumaElevatedBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource LumaTextPrimaryBrush}" />
+  </Style>
+  <Style Selector="ToggleButton.segment:checked:pointerover"><Setter Property="Background" Value="{DynamicResource LumaElevatedBrush}" /></Style>
+
+  <!-- Plain list (used for virtualised galleries and rows) -->
+  <Style Selector="ListBox.plain">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="Padding" Value="0" />
+    <Setter Property="SelectionMode" Value="Single" />
+    <Setter Property="ScrollViewer.HorizontalScrollBarVisibility" Value="Disabled" />
+  </Style>
+  <Style Selector="ListBox.plain > ListBoxItem">
+    <Setter Property="Padding" Value="0" />
+    <Setter Property="Margin" Value="0" />
+    <Setter Property="MinHeight" Value="0" />
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="Focusable" Value="False" />
+    <Setter Property="Template">
+      <ControlTemplate>
+        <ContentPresenter Content="{TemplateBinding Content}" ContentTemplate="{TemplateBinding ContentTemplate}"
+                          Padding="{TemplateBinding Padding}" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch" />
+      </ControlTemplate>
+    </Setter>
+  </Style>
+
+  <!-- ================= Inputs ================= -->
+  <Style Selector="TextBox">
+    <Setter Property="MinHeight" Value="40" />
+    <Setter Property="Padding" Value="12,9" />
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusSm}" />
+    <Setter Property="FontSize" Value="{DynamicResource FontSizeBody}" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
+    <Setter Property="SelectionBrush" Value="{DynamicResource LumaAccentSubtleBrush}" />
+    <Setter Property="CaretBrush" Value="{DynamicResource LumaAccentBrush}" />
+  </Style>
+  <Style Selector="TextBox.bare">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="Padding" Value="0" />
+    <Setter Property="MinHeight" Value="0" />
+  </Style>
+  <Style Selector="TextBox.bare:focus /template/ Border#PART_BorderElement, TextBox.bare:pointerover /template/ Border#PART_BorderElement">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+  </Style>
+  <Style Selector="ComboBox">
+    <Setter Property="MinHeight" Value="38" />
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusSm}" />
+    <Setter Property="Padding" Value="12,6" />
+    <Setter Property="FontSize" Value="{DynamicResource FontSizeBody}" />
+  </Style>
+  <Style Selector="ComboBoxItem">
+    <Setter Property="CornerRadius" Value="6" />
+    <Setter Property="Margin" Value="4,1" />
+  </Style>
+  <Style Selector="ProgressBar">
+    <Setter Property="Foreground" Value="{DynamicResource LumaAccentBrush}" />
+    <Setter Property="Background" Value="{DynamicResource LumaBorderBrush}" />
+    <Setter Property="MinHeight" Value="4" />
+    <Setter Property="CornerRadius" Value="2" />
+  </Style>
+  <Style Selector="ProgressBar /template/ Border#PART_Indicator"><Setter Property="CornerRadius" Value="2" /></Style>
+  <Style Selector="ToolTip">
+    <Setter Property="CornerRadius" Value="8" />
+    <Setter Property="Padding" Value="10,6" />
+    <Setter Property="FontSize" Value="12" />
+  </Style>
+  <Style Selector="FlyoutPresenter">
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusMd}" />
+    <Setter Property="Padding" Value="0" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="BorderBrush" Value="{DynamicResource LumaBorderBrush}" />
+  </Style>
+  <Style Selector="MenuFlyoutPresenter">
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusMd}" />
+    <Setter Property="Padding" Value="6" />
+  </Style>
+  <Style Selector="MenuItem">
+    <Setter Property="CornerRadius" Value="6" />
+    <Setter Property="Padding" Value="10,8" />
+  </Style>
+
+  <!-- ================= Surfaces ================= -->
+  <Style Selector="Border.card">
+    <Setter Property="Background" Value="{DynamicResource LumaSurfaceBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource LumaBorderSubtleBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusLg}" />
+  </Style>
+  <Style Selector="Border.popup">
+    <Setter Property="Background" Value="{DynamicResource LumaElevatedBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource LumaBorderBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusMd}" />
+    <Setter Property="BoxShadow" Value="{DynamicResource ShadowPopup}" />
+  </Style>
+  <Style Selector="Border.divider">
+    <Setter Property="Height" Value="1" />
+    <Setter Property="Background" Value="{DynamicResource LumaBorderSubtleBrush}" />
+  </Style>
+  <Style Selector="Border.pill">
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusPill}" />
+    <Setter Property="Padding" Value="9,3" />
+    <Setter Property="Background" Value="{DynamicResource LumaHoverBrush}" />
+  </Style>
+
+  <!-- Subtle shimmer for loading skeletons -->
+  <Style Selector="Border.skeleton">
+    <Setter Property="Background" Value="{DynamicResource LumaSkeletonBrush}" />
+    <Style.Animations>
+      <Animation Duration="0:0:1.4" IterationCount="Infinite" PlaybackDirection="Alternate" Easing="SineEaseInOut">
+        <KeyFrame Cue="0%"><Setter Property="Opacity" Value="0.55" /></KeyFrame>
+        <KeyFrame Cue="100%"><Setter Property="Opacity" Value="1" /></KeyFrame>
+      </Animation>
+    </Style.Animations>
+  </Style>
+</Styles>
