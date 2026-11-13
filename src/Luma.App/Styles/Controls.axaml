@@ -74,11 +74,8 @@
         </Border>
       </ControlTemplate>
     </Setter>
-    <Setter Property="Transitions">
-      <Transitions>
-        <BrushTransition Property="Background" Duration="0:0:0.12" />
-      </Transitions>
-    </Setter>
+    <!-- No Background transition on purpose: fading from Transparent (black, alpha 0) to a
+         translucent hover brush passes through a bright grey and shows up as a flash. -->
   </Style>
   <Style Selector="Button:pointerover"><Setter Property="Background" Value="{DynamicResource LumaHoverBrush}" /></Style>
   <Style Selector="Button:pressed"><Setter Property="Background" Value="{DynamicResource LumaPressedBrush}" /></Style>
