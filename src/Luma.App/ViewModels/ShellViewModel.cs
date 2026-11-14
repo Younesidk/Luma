@@ -52,7 +52,8 @@ public sealed partial class ShellViewModel : ObservableObject
 
     public ShellViewModel(DiscoverViewModel discover, FavoritesViewModel favorites, CollectionsViewModel collections,
         DownloadsViewModel downloads, HistoryViewModel history, SettingsViewModel settings, NavigationService navigation,
-        PreviewService preview, DialogService dialogs, ToastService toasts, ISettingsService settingsService, ShellStartup startup)
+        PreviewService preview, DialogService dialogs, ToastService toasts, ISettingsService settingsService, ShellStartup startup,
+        UpdateViewModel updates)
     {
         Discover = discover;
         _navigation = navigation;
@@ -61,6 +62,7 @@ public sealed partial class ShellViewModel : ObservableObject
         Dialogs = dialogs;
         Toasts = toasts;
         Startup = startup;
+        Updates = updates;
 
         _pages = new Dictionary<AppPage, PageViewModel>
         {
@@ -114,6 +116,7 @@ public sealed partial class ShellViewModel : ObservableObject
     public DialogService Dialogs { get; }
     public ToastService Toasts { get; }
     public ShellStartup Startup { get; }
+    public UpdateViewModel Updates { get; }
 
     public IReadOnlyList<NavItemViewModel> LibraryItems { get; }
     public IReadOnlyList<NavItemViewModel> SourceItems { get; }

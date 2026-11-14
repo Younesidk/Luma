@@ -1,4 +1,4 @@
-﻿<Window xmlns="https://github.com/avaloniaui"
+<Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:c="using:Luma.App.Controls"
         xmlns:vm="using:Luma.App.ViewModels"
@@ -166,6 +166,68 @@
           <DataTemplate DataType="svc:CollectionPickerDialogViewModel"><v:CollectionPickerDialogView /></DataTemplate>
         </ContentControl.DataTemplates>
       </ContentControl>
+    </Border>
+
+    <!-- Update card: quiet, top-right, only when there is something to act on -->
+    <Border DataContext="{Binding Updates}" x:DataType="vm:UpdateViewModel" Classes="toast" IsVisible="{Binding IsCardVisible}"
+            Width="360" Padding="18,16,14,16" Margin="0,64,28,0" HorizontalAlignment="Right" VerticalAlignment="Top">
+      <StackPanel Spacing="12">
+        <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
+          <Border Width="34" Height="34" CornerRadius="10" VerticalAlignment="Top">
+            <Border.Background>
+              <LinearGradientBrush StartPoint="0%,0%" EndPoint="100%,100%">
+                <GradientStop Color="{DynamicResource LumaAccentSecondaryColor}" Offset="0" />
+                <GradientStop Color="{DynamicResource LumaAccentColor}" Offset="1" />
+              </LinearGradientBrush>
+            </Border.Background>
+            <Panel>
+              <c:Icon Data="{StaticResource Icon.Sparkle}" Size="17" Foreground="White" IsVisible="{Binding !IsFailed}" />
+              <c:Icon Data="{StaticResource Icon.Alert}" Size="17" Foreground="White" IsVisible="{Binding IsFailed}" />
+            </Panel>
+          </Border>
+          <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
+            <TextBlock Text="{Binding CardTitle}" FontWeight="SemiBold" FontSize="14" TextWrapping="Wrap" />
+            <TextBlock Text="{Binding VersionText}" Classes="secondary" FontSize="12" />
+          </StackPanel>
+          <Button Grid.Column="2" Classes="icon" Width="28" Height="28" Command="{Binding LaterCommand}" VerticalAlignment="Top"
+                  IsVisible="{Binding !IsRestarting}" ToolTip.Tip="Remind me later" AutomationProperties.Name="Dismiss update">
+            <c:Icon Data="{StaticResource Icon.Close}" Size="14" />
+          </Button>
+        </Grid>
+
+        <TextBlock Text="{Binding CardMessage}" IsVisible="{Binding HasCardMessage}" Classes="secondary" TextWrapping="Wrap" LineHeight="19" FontSize="13" />
+
+        <StackPanel Spacing="8" IsVisible="{Binding HasReleaseNotes}">
+          <Button Classes="icon" Padding="0" Height="22" HorizontalAlignment="Left" Command="{Binding ToggleNotesCommand}" AutomationProperties.Name="Show what's new">
+            <StackPanel Orientation="Horizontal" Spacing="6">
+              <TextBlock Text="What's new" FontSize="12" FontWeight="Medium" Foreground="{DynamicResource LumaAccentBrush}" VerticalAlignment="Center" />
+              <c:Icon Data="{StaticResource Icon.ChevronDown}" Size="12" Foreground="{DynamicResource LumaAccentBrush}" VerticalAlignment="Center" />
+            </StackPanel>
+          </Button>
+          <Border IsVisible="{Binding ShowNotes}" Background="{DynamicResource LumaSurfaceBrush}" CornerRadius="10" Padding="12,10">
+            <ScrollViewer MaxHeight="180" VerticalScrollBarVisibility="Auto">
+              <SelectableTextBlock Text="{Binding ReleaseNotes}" TextWrapping="Wrap" FontSize="12" LineHeight="18" />
+            </ScrollViewer>
+          </Border>
+        </StackPanel>
+
+        <StackPanel Spacing="6" IsVisible="{Binding IsDownloading}">
+          <ProgressBar Minimum="0" Maximum="100" Value="{Binding Progress}" Height="4" />
+          <Grid ColumnDefinitions="*,Auto">
+            <TextBlock Text="{Binding ProgressText}" Classes="secondary" FontSize="12" VerticalAlignment="Center" />
+            <Button Grid.Column="1" Classes="secondary" Content="Cancel" Command="{Binding CancelDownloadCommand}" Padding="12,5" FontSize="12" />
+          </Grid>
+        </StackPanel>
+        <ProgressBar IsIndeterminate="True" Height="4" IsVisible="{Binding IsRestarting}" />
+
+        <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
+          <Button Classes="secondary" Content="Later" Command="{Binding LaterCommand}" IsVisible="{Binding IsAvailable}" Padding="14,7" FontSize="13" />
+          <Button Classes="primary" Content="Update now" Command="{Binding UpdateNowCommand}" IsVisible="{Binding IsAvailable}" Padding="14,7" FontSize="13" />
+          <Button Classes="secondary" Content="Later" Command="{Binding LaterCommand}" IsVisible="{Binding IsReady}" Padding="14,7" FontSize="13" />
+          <Button Classes="primary" Content="Restart now" Command="{Binding RestartCommand}" IsVisible="{Binding IsReady}" Padding="14,7" FontSize="13" />
+          <Button Classes="primary" Content="Try again" Command="{Binding UpdateNowCommand}" IsVisible="{Binding CanRetryDownload}" Padding="14,7" FontSize="13" />
+        </StackPanel>
+      </StackPanel>
     </Border>
 
     <ItemsControl ItemsSource="{Binding Toasts.Toasts}" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,28,28" IsHitTestVisible="True">

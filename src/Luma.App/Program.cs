@@ -3,14 +3,23 @@ using Avalonia;
 using Avalonia.Win32;
 using Avalonia.X11;
 using Luma.Infrastructure.Services;
+using Velopack;
 
 namespace Luma.App;
 
 public static class Program
 {
     [STAThread]
-    public static void Main(string[] args) =>
+    public static void Main(string[] args)
+    {
+        // Must run first: Velopack handles its install/update/uninstall hooks here (and exits the process for them),
+        // and applies an update that was downloaded in a previous session. In a plain development build it does nothing.
+        VelopackApp.Build()
+            .SetArgs(args)
+            .Run();
+
         BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
+    }
 
     public static AppBuilder BuildAvaloniaApp()
     {

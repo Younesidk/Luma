@@ -106,16 +106,129 @@ Create a distributable build (framework-dependent, needs the .NET 11 runtime on 
 
 Use `-SelfContained` to bundle the runtime.
 
-### Windows installer
+### Windows installer (Velopack)
 
-Builds a self-contained `Luma-Setup-<version>.exe` (about 46 MB, no .NET install needed on the target machine). It needs [Inno Setup 6](https://jrsoftware.org/isinfo.php):
+Luma is packaged with [Velopack](https://velopack.io), which builds the installer **and** the update packages that
+installed copies download from GitHub Releases. `vpk` is pinned as a local tool in `dotnet-tools.json`, so there is
+nothing else to install:
 
 ```powershell
-winget install JRSoftware.InnoSetup
-./scripts/build-installer.ps1    # -> artifacts/installer/Luma-Setup-1.0.0.exe
+./scripts/build-installer.ps1
 ```
 
-The installer is per-user by default (no admin rights; the dialog offers "all users"), adds a Start menu entry and an optional desktop shortcut, and registers an uninstaller. Uninstalling leaves your library and settings in `%LocalAppData%\Luma`. The version comes from `Directory.Build.props`; the script is `installer/Luma.iss`.
+The script reads the version from `Directory.Build.props`, publishes Luma self-contained for win-x64, downloads the
+latest published GitHub release (so a delta package can be built against it) and runs `vpk pack`. Everything lands
+in `Releases/` (git-ignored):
+
+| File | Purpose | Upload to GitHub? |
+|---|---|---|
+| `Luma.Desktop-win-Setup.exe` | Installer for new machines (no admin, no .NET needed) | Yes |
+| `Luma.Desktop-<version>-full.nupkg` | Full update package | Yes |
+| `Luma.Desktop-<version>-delta.nupkg` | Small update from the previous version (only when one was found) | Yes |
+| `releases.win.json` | Release feed that installed copies read | Yes |
+| `RELEASES` | Legacy feed (older Velopack/Squirrel clients) | Yes |
+| `Luma.Desktop-win-Portable.zip` | Portable build | Optional |
+| `assets.win.json` | List of files for `vpk upload` | No |
+
+The installer is per-user: it installs into `%LocalAppData%\Luma.Desktop`, creates Start menu and desktop shortcuts
+named **Luma** with Luma's icon, and registers an uninstaller under *Settings → Apps*. Options: `-ReleaseNotes <file.md>`
+(defaults to `release-notes/<version>.md`), `-SkipDelta`, `-Runtime linux-x64` (run on Linux; produces an AppImage).
+
+> **Why `Luma.Desktop` and not `Luma`?** Velopack installs into `%LocalAppData%\<packId>` and deletes that folder on
+> uninstall. Luma's *data* lives in `%LocalAppData%\Luma`, so the pack id must be different; the script refuses
+> `Luma`. Never change the pack id after the first release: it is the identity installed copies update against.
+
+## Releases and automatic updates
+
+GitHub Releases are the single source of truth. Installed copies of Luma check
+`https://github.com/Younesidk/Luma` for the newest **stable** release (drafts and prereleases are ignored; no token
+is used or embedded).
+
+### Publishing a new version
+
+1. Bump `<Version>` in `Directory.Build.props` (for example `1.1.0`). This is the only version number.
+2. Optionally write `release-notes/1.1.0.md`; it appears under "What's new" in the update card.
+3. Package:
+   ```powershell
+   ./scripts/build-installer.ps1
+   ```
+4. Commit, then publish the release, either:
+   - **with vpk** (creates the tag and release and uploads exactly the right files):
+     ```powershell
+     dotnet vpk upload github --repoUrl https://github.com/Younesidk/Luma --channel win --outputDir Releases --tag v1.1.0 --releaseName "Luma 1.1.0" --publish --token <github-token>
+     ```
+     The token is a fine-grained personal access token with *Contents: read and write* on this repository. Pass it
+     on the command line or via an environment variable; never commit it.
+   - **or by hand**: create a release with tag `v1.1.0` on github.com, attach the "Yes" files from the table
+     above, and publish it (not as a draft, not as a prerelease).
+5. Installed copies find the update about 20 seconds after their next start (and every 6 hours while running),
+   or immediately via *Settings → About Luma → Check for updates*.
+
+Build each release from a `Releases/` folder that contains the previous release (the script downloads it), and
+publish releases in version order, so the delta chain stays intact. If a delta is missing, Velopack falls back to the
+full package automatically.
+
+### How updating works
+
+- `Program.Main` calls `VelopackApp.Build().Run()` before anything else. It handles install/uninstall hooks and, if an
+  update was downloaded but not installed, installs it during start-up.
+- `UpdateService` (`src/Luma.App/Services/Updates`) waits until the window is open, then checks in the background.
+  Only one check or download runs at a time; failures (offline, GitHub down, damaged package) are logged and shown
+  as state, never thrown, so Luma always starts and works normally.
+- When a newer version exists, a small card appears in the top-right corner with the version, size, release notes,
+  **Update now** and **Later**. *Update now* downloads (delta when possible, verified by checksum) with a progress bar
+  and a Cancel button; then the card offers **Restart now**. Luma shuts down normally (settings flushed, database
+  closed), Velopack swaps the program files and relaunches Luma. *Later* hides the card for this session; an update
+  that was already downloaded installs on the next start.
+- Updates replace only the program folder `%LocalAppData%\Luma.Desktop\current`. The data folder
+  `%LocalAppData%\Luma` (database, settings, downloads, thumbnails, logs) is never touched by installing, updating
+  or uninstalling.
+- Development builds (`dotnet run`, `publish.ps1`) are not Velopack installations: the update system stays inactive
+  and Settings says so.
+
+Configuration lives in `src/Luma.App/appsettings.json` under `Luma:Updates` (`Enabled`, `Source`,
+`InitialDelaySeconds`, `CheckIntervalHours`, `CheckTimeoutSeconds`). Any value can be overridden with an environment
+variable such as `LUMA_Luma__Updates__Source`.
+
+### Testing updates locally (no GitHub needed)
+
+`Source` can also be a local folder of Velopack release files:
+
+```powershell
+# 1. Build and install version A (e.g. 1.0.0)
+./scripts/build-installer.ps1 -SkipDelta
+./Releases/Luma.Desktop-win-Setup.exe
+
+# 2. Bump <Version> to 1.0.1, build into the same folder (a delta from 1.0.0 is built automatically)
+./scripts/build-installer.ps1 -SkipDelta
+
+# 3. Close Luma, then start the installed copy pointed at the local folder
+$env:LUMA_Luma__Updates__Source = "$PWD\Releases"
+& "$env:LOCALAPPDATA\Luma.Desktop\current\Luma.exe"
+```
+
+Then use *Settings → Check for updates* (or wait ~20 s): the card should offer 1.0.1, download it, restart, and the
+sidebar should read *Version 1.0.1* with your favourites and settings intact. Uninstall the test copy from
+*Settings → Apps* afterwards (your data folder stays). To test against GitHub instead, publish a release and run the
+installed copy without the environment variable.
+
+### Migrating from the old Inno Setup installer
+
+Copies installed with the earlier `Luma-Setup-1.0.0.exe` (Inno Setup) are **not** Velopack installations and
+**cannot update themselves**; they will never see new releases. They live in a different folder
+(`%LocalAppData%\Programs\Luma`) and have their own uninstaller, so installing the Velopack version on top would leave
+two "Luma" entries in *Apps* and two sets of Start menu shortcuts. Migrate once, per machine:
+
+1. Close Luma.
+2. *Optional safety net:* copy `%LocalAppData%\Luma` somewhere else.
+3. *Settings → Apps → Installed apps → Luma → Uninstall* (the old entry, version 1.0.0). The Inno uninstaller removes
+   only the program files; `%LocalAppData%\Luma` is kept.
+4. Run `Luma.Desktop-win-Setup.exe` from the latest GitHub release.
+5. Open Luma: favourites, collections, downloads, history and settings are all still there, because both versions use
+   the same data folder. From now on Luma updates itself.
+
+If the new version was installed before uninstalling the old one, nothing is lost: uninstall the *older* "Luma"
+entry afterwards (version 1.0.0) and delete any leftover `Luma` folder in the Start menu.
 
 ## Providers
 

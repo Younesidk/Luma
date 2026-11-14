@@ -176,6 +176,14 @@
           <c:SettingRow Heading="Luma" Description="Your desktop. Your atmosphere. A lightweight wallpaper manager for personal use.">
             <TextBlock Text="{Binding Version, StringFormat='Version {0}'}" Classes="secondary" />
           </c:SettingRow>
+          <c:SettingRow Heading="Updates" Description="{Binding Updates.SettingsStatus}">
+            <StackPanel Orientation="Horizontal" Spacing="8">
+              <Button Classes="primary" Content="Restart to update" Command="{Binding Updates.RestartCommand}" IsVisible="{Binding Updates.IsReady}" />
+              <Button Classes="primary" Content="Update now" Command="{Binding Updates.UpdateNowCommand}" IsVisible="{Binding Updates.IsAvailable}" />
+              <Button Classes="secondary" Content="Check for updates" Command="{Binding Updates.CheckForUpdatesCommand}"
+                      IsEnabled="{Binding Updates.CanCheck}" IsVisible="{Binding Updates.IsSupported}" />
+            </StackPanel>
+          </c:SettingRow>
           <c:SettingRow Heading="Data folder" Description="{Binding DataDirectory}">
             <Button Classes="secondary" Content="Open" Command="{Binding OpenDataFolderCommand}" />
           </c:SettingRow>

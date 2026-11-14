@@ -1,5 +1,6 @@
-﻿using System.Reflection;
+using System.Reflection;
 using Luma.App.Services;
+using Luma.App.Services.Updates;
 using Luma.App.ViewModels;
 using Luma.Core.Interfaces;
 using Luma.Infrastructure;
@@ -32,6 +33,7 @@ public static class LumaHost
         services.AddLogging(builder => builder.AddSerilog(Log.Logger, dispose: true));
         services.Configure<LumaOptions>(configuration.GetSection(LumaOptions.SectionName));
         services.AddLumaInfrastructure(paths);
+        services.Configure<LumaUpdateOptions>(configuration.GetSection(LumaUpdateOptions.SectionName));
         AddApplication(services);
         return services.BuildServiceProvider(new ServiceProviderOptions { ValidateOnBuild = false, ValidateScopes = false });
     }
@@ -57,6 +59,10 @@ public static class LumaHost
         services.AddSingleton<WallpaperActions>();
         services.AddSingleton<WallpaperItemFactory>();
         services.AddSingleton<ShellStartup>();
+        services.AddSingleton<IUpdateClient, VelopackUpdateClient>();
+        services.AddSingleton<UpdateService>();
+        services.AddSingleton<IUpdateService>(sp => sp.GetRequiredService<UpdateService>());
+        services.AddSingleton<UpdateViewModel>();
 
         services.AddSingleton<DiscoverViewModel>();
         services.AddSingleton<FavoritesViewModel>();

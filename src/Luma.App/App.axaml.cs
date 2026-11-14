@@ -5,6 +5,7 @@ using Avalonia.Controls.Templates;
 using Avalonia.Markup.Xaml;
 using Avalonia.Threading;
 using Luma.App.Services;
+using Luma.App.Services.Updates;
 using Luma.App.ViewModels;
 using Luma.App.Views;
 using Luma.Core.Interfaces;
@@ -53,10 +54,27 @@ public partial class App : Application
                 {
                     _services.GetRequiredService<ILogger<App>>().LogError(ex, "Start-up failed");
                 }
+                StartUpdates(desktop);
             };
         }
 
         base.OnFrameworkInitializationCompleted();
+    }
+
+    /// <summary>Background update checks begin only once the window is up; a failure here is logged and otherwise ignored.</summary>
+    private void StartUpdates(IClassicDesktopStyleApplicationLifetime desktop)
+    {
+        try
+        {
+            var updates = _services!.GetRequiredService<UpdateService>();
+            // Velopack's updater waits for Luma to exit; a normal shutdown flushes settings and closes the database first.
+            updates.RestartRequested += (_, _) => Dispatcher.UIThread.Post(() => desktop.Shutdown());
+            updates.StartBackgroundChecks();
+        }
+        catch (Exception ex)
+        {
+            Log.Warning(ex, "Automatic updates could not be started");
+        }
     }
 
     private void Shutdown()
@@ -74,7 +92,15 @@ public partial class App : Application
         }
         finally
         {
-            _services?.Dispose();
+            // Some services (e.g. RotationService) are only IAsyncDisposable; synchronous Dispose() throws for them.
+            try
+            {
+                if (_services is not null) Task.Run(() => _services.DisposeAsync().AsTask()).GetAwaiter().GetResult();
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "Error while disposing services");
+            }
             Log.CloseAndFlush();
         }
     }

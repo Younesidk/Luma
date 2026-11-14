@@ -125,7 +125,7 @@ public sealed partial class SettingsViewModel : PageViewModel
     public SettingsViewModel(ISettingsService settings, ThemeService theme, IProviderRegistry providers, IImageFetcher fetcher,
         ImageLoader imageLoader, ICollectionService collections, IRotationService rotation, IShellLauncher shell, ILumaPaths paths,
         IFileDialogService files, IDialogService dialogs, IToastService toasts, IWallpaperApplyService apply, ShellStartup startup,
-        ILogger<SettingsViewModel> logger)
+        UpdateViewModel updates, ILogger<SettingsViewModel> logger)
     {
         _settings = settings;
         _theme = theme;
@@ -141,6 +141,7 @@ public sealed partial class SettingsViewModel : PageViewModel
         _toasts = toasts;
         _apply = apply;
         _startup = startup;
+        Updates = updates;
         _logger = logger;
 
         ThemeOptions = Enum.GetValues<ThemePreference>().Select(t => new Option<ThemePreference>(ThemeNames[t], t)).ToList();
@@ -189,6 +190,7 @@ public sealed partial class SettingsViewModel : PageViewModel
     public ObservableCollection<Option<long?>> CollectionOptions { get; } = [];
 
     public string Version { get; }
+    public UpdateViewModel Updates { get; }
     public string DataDirectory => _paths.DataRoot;
     public string LogsDirectory => _paths.LogsDirectory;
     public string PlatformSummary => _apply.Capabilities.IsSupported
