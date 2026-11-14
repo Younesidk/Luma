@@ -102,6 +102,17 @@ Create a distributable build (framework-dependent, needs the .NET 11 runtime on 
 
 Use `-SelfContained` to bundle the runtime.
 
+### Windows installer
+
+Builds a self-contained `Luma-Setup-<version>.exe` (about 46 MB, no .NET install needed on the target machine). It needs [Inno Setup 6](https://jrsoftware.org/isinfo.php):
+
+```powershell
+winget install JRSoftware.InnoSetup
+./scripts/build-installer.ps1    # -> artifacts/installer/Luma-Setup-1.0.0.exe
+```
+
+The installer is per-user by default (no admin rights; the dialog offers "all users"), adds a Start menu entry and an optional desktop shortcut, and registers an uninstaller. Uninstalling leaves your library and settings in `%LocalAppData%\Luma`. The version comes from `Directory.Build.props`; the script is `installer/Luma.iss`.
+
 ## Providers
 
 ### Wallhaven

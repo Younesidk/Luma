@@ -10,9 +10,9 @@ param(
 
 $root = Split-Path -Parent $PSScriptRoot
 $output = Join-Path $root "artifacts/Luma-$Runtime"
-$selfContained = if ($SelfContained) { "true" } else { "false" }
+$sc = if ($SelfContained) { "true" } else { "false" }
 
-dotnet publish (Join-Path $root "src/Luma.App") -c Release -r $Runtime --self-contained $selfContained -o $output
+dotnet publish (Join-Path $root "src/Luma.App") -c Release -r $Runtime --self-contained $sc -o $output
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
 # Native debug symbols (SkiaSharp, HarfBuzz) are very large and not needed to run the app.
