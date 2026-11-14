@@ -1,6 +1,10 @@
-# Luma
+<p align="center">
+  <img src="docs/logo.png" alt="Luma logo" width="128" height="128">
+</p>
 
-**Your desktop. Your atmosphere.**
+<h1 align="center">Luma</h1>
+
+<p align="center"><b>Your desktop. Your atmosphere.</b></p>
 
 Luma is a lightweight, personal desktop wallpaper manager. Discover wallpapers from several online sources, preview
 them in full quality, download them, organise them into collections, keep favourites and apply them straight to your
