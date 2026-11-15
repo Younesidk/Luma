@@ -6,7 +6,7 @@
              x:Class="Luma.App.Views.FilterPanel"
              x:DataType="vm:DiscoverViewModel">
   <Border Classes="popup" Width="420" Padding="0" BoxShadow="none">
-    <ScrollViewer MaxHeight="560" VerticalScrollBarVisibility="Auto">
+    <ScrollViewer x:Name="Scroller" MaxHeight="560" VerticalScrollBarVisibility="Auto">
       <StackPanel Margin="22" Spacing="18">
 
         <Grid ColumnDefinitions="*,Auto">

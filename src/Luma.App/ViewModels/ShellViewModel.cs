@@ -1,4 +1,4 @@
-using System.Collections.ObjectModel;
+﻿using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Reflection;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -93,7 +93,7 @@ public sealed partial class ShellViewModel : ObservableObject
         _isSidebarCompact = settingsService.Current.SidebarCompact;
         foreach (var item in LibraryItems.Concat(SourceItems).Concat(SystemItems))
         {
-            item.IsCompact = _isSidebarCompact;
+            item.IsCompact = IsSidebarCollapsed;
             var captured = item;
             item.OpenAction = () => Open(captured);
         }
@@ -135,12 +135,35 @@ public sealed partial class ShellViewModel : ObservableObject
     [ObservableProperty]
     private string _globalSearchText = string.Empty;
 
-    public double SidebarWidth => IsSidebarCompact ? 76 : 248;
+    /// <summary>Set by the window: on narrow windows the sidebar collapses to icons without changing the saved preference.</summary>
+    [ObservableProperty]
+    private bool _isWindowNarrow;
+
+    /// <summary>The user's explicit choice while the window is narrow; cleared when the window becomes wide again.</summary>
+    private bool? _narrowOverride;
+
+    /// <summary>What the sidebar actually shows: the saved preference, or icons-only while the window is narrow.</summary>
+    public bool IsSidebarCollapsed => IsWindowNarrow ? _narrowOverride ?? true : IsSidebarCompact;
+
+    public double SidebarWidth => IsSidebarCollapsed ? 76 : 248;
 
     partial void OnIsSidebarCompactChanged(bool value)
     {
         if (_settings.Current.SidebarCompact != value) _settings.Update(s => s.SidebarCompact = value);
-        foreach (var item in LibraryItems.Concat(SourceItems).Concat(SystemItems)) item.IsCompact = value;
+        RefreshSidebar();
+    }
+
+    partial void OnIsWindowNarrowChanged(bool value)
+    {
+        _narrowOverride = null;
+        RefreshSidebar();
+    }
+
+    private void RefreshSidebar()
+    {
+        var collapsed = IsSidebarCollapsed;
+        foreach (var item in LibraryItems.Concat(SourceItems).Concat(SystemItems)) item.IsCompact = collapsed;
+        OnPropertyChanged(nameof(IsSidebarCollapsed));
         OnPropertyChanged(nameof(SidebarWidth));
     }
 
@@ -160,7 +183,19 @@ public sealed partial class ShellViewModel : ObservableObject
     }
 
     [RelayCommand]
-    private void ToggleSidebar() => IsSidebarCompact = !IsSidebarCompact;
+    private void ToggleSidebar()
+    {
+        if (IsWindowNarrow)
+        {
+            // Temporary: expanding on a narrow window should not overwrite the saved preference.
+            _narrowOverride = !IsSidebarCollapsed;
+            RefreshSidebar();
+        }
+        else
+        {
+            IsSidebarCompact = !IsSidebarCompact;
+        }
+    }
 
     [RelayCommand]
     private void Open(NavItemViewModel item)

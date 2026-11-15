@@ -1,4 +1,4 @@
-using System.Collections.ObjectModel;
+﻿using System.Collections.ObjectModel;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using Avalonia.Media;
@@ -239,8 +239,8 @@ public sealed partial class SettingsViewModel : PageViewModel
 
     public IReadOnlyList<Option<RenderingMode>> RenderingOptions { get; } =
     [
-        new("Efficient (low memory)", RenderingMode.Efficient),
-        new("Accelerated (GPU)", RenderingMode.Accelerated)
+        new("Accelerated (GPU)", RenderingMode.Accelerated),
+        new("Efficient (low memory)", RenderingMode.Efficient)
     ];
 
     public Option<RenderingMode> SelectedRendering
@@ -250,8 +250,8 @@ public sealed partial class SettingsViewModel : PageViewModel
     }
 
     public string RenderingNote => S.RenderingMode == RenderingMode.Efficient
-        ? "Uses the CPU to draw the interface, which keeps memory low. Takes effect the next time Luma starts."
-        : "Uses the graphics card for smoother animation on very high resolution displays, at the cost of roughly 100 MB more memory. Takes effect the next time Luma starts.";
+        ? "Uses the CPU to draw the interface, which keeps memory low but makes scrolling and animation less smooth. Takes effect the next time Luma starts."
+        : "Uses the graphics card for smooth scrolling and animation, at the cost of roughly 100 MB more memory. Takes effect the next time Luma starts.";
 
     // ----- Downloads -----
 

@@ -1,4 +1,4 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 using System.Text.Json.Serialization;
 using Luma.Core.Interfaces;
 using Luma.Core.Models;
@@ -60,8 +60,14 @@ public sealed class SettingsService : ISettingsService, IDisposable
             TryBackupCorruptFile(path);
         }
 
+        var migrated = loaded.Migrate();
         loaded.Normalize();
-        lock (_gate) _current = loaded;
+        lock (_gate)
+        {
+            _current = loaded;
+            // Persist the migration so it only ever runs once (saved on the next change or at shutdown).
+            if (migrated && File.Exists(path)) _dirty = true;
+        }
     }
 
     public void Update(Action<AppSettings> mutate)
@@ -91,6 +97,7 @@ public sealed class SettingsService : ISettingsService, IDisposable
     public async Task ResetAsync(CancellationToken cancellationToken = default)
     {
         AppSettings fresh = new();
+        fresh.Migrate(); // stamp the current version so a later choice is never "migrated" away
         lock (_gate)
         {
             _current = fresh;

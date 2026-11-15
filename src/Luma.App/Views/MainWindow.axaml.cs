@@ -3,6 +3,7 @@ using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Media;
+using Avalonia.Platform;
 using Avalonia.VisualTree;
 using Luma.App.ViewModels;
 
@@ -24,6 +25,56 @@ public partial class MainWindow : Window
 
         AddHandler(KeyDownEvent, OnWindowKeyDown, RoutingStrategies.Tunnel);
         DataContextChanged += (_, _) => AttachShell();
+
+        // The design size (1360×860) is larger than many laptop screens once Windows display scaling is applied
+        // (1366×768 at 125% is only ~1090×580 usable), which pushed the close button and the sidebar footer off-screen.
+        // Size the window to the screen it opens on before it is shown, then keep it inside whatever screen it lands on.
+        FitToScreen(Screens.Primary, center: true);
+        Opened += (_, _) => FitToScreen(Screens.ScreenFromWindow(this), center: true);
+        ScalingChanged += (_, _) => FitToScreen(Screens.ScreenFromWindow(this), center: false);
+    }
+
+    private const double PreferredWidth = 1360;
+    private const double PreferredHeight = 860;
+    private const double DesignMinWidth = 860;
+    private const double DesignMinHeight = 560;
+
+    /// <summary>
+    /// Clamps the window (and its minimum size) to the screen's working area, in device-independent pixels.
+    /// Only ever shrinks: a user who has already resized the window larger on a big monitor keeps that size.
+    /// </summary>
+    private void FitToScreen(Screen? screen, bool center)
+    {
+        if (screen is null || WindowState != WindowState.Normal) return;
+        var scaling = screen.Scaling > 0 ? screen.Scaling : 1;
+        var area = screen.WorkingArea;
+        var areaWidth = area.Width / scaling;
+        var areaHeight = area.Height / scaling;
+        if (areaWidth <= 0 || areaHeight <= 0) return;
+
+        MinWidth = Math.Min(DesignMinWidth, areaWidth);
+        MinHeight = Math.Min(DesignMinHeight, areaHeight);
+
+        // Leave a little breathing room around the window so it never looks jammed against the taskbar.
+        var maxWidth = Math.Floor(areaWidth * 0.94);
+        var maxHeight = Math.Floor(areaHeight * 0.94);
+        var width = Math.Max(MinWidth, Math.Min(double.IsNaN(Width) ? PreferredWidth : Width, maxWidth));
+        var height = Math.Max(MinHeight, Math.Min(double.IsNaN(Height) ? PreferredHeight : Height, maxHeight));
+        var resized = Math.Abs(width - Width) > 0.5 || Math.Abs(height - Height) > 0.5;
+        Width = width;
+        Height = height;
+
+        if (!center && !resized && IsInside(area, scaling)) return;
+        var x = area.X + (int)Math.Round((area.Width - width * scaling) / 2);
+        var y = area.Y + (int)Math.Round((area.Height - height * scaling) / 2);
+        if (center || !IsInside(area, scaling)) Position = new PixelPoint(Math.Max(area.X, x), Math.Max(area.Y, y));
+    }
+
+    private bool IsInside(PixelRect area, double scaling)
+    {
+        var right = Position.X + (int)Math.Round(Width * scaling);
+        var bottom = Position.Y + (int)Math.Round(Height * scaling);
+        return Position.X >= area.X && Position.Y >= area.Y && right <= area.Right && bottom <= area.Bottom;
     }
 
     private void InitializeComponent() => Avalonia.Markup.Xaml.AvaloniaXamlLoader.Load(this);
@@ -32,7 +83,18 @@ public partial class MainWindow : Window
     {
         base.OnPropertyChanged(change);
         if (change.Property == WindowStateProperty) UpdateWindowChrome();
+        else if (change.Property == ClientSizeProperty) UpdateNarrow();
         else if (change.Property == OffScreenMarginProperty) UpdateWindowChrome();
+    }
+
+    /// <summary>Below this width the sidebar collapses to icons so the gallery keeps a usable amount of room.</summary>
+    private const double NarrowWidth = 1040;
+
+    private void UpdateNarrow()
+    {
+        if (_shell is null) return;
+        var narrow = ClientSize.Width > 0 && ClientSize.Width < NarrowWidth;
+        if (_shell.IsWindowNarrow != narrow) _shell.IsWindowNarrow = narrow;
     }
 
     private void UpdateWindowChrome()
@@ -68,6 +130,7 @@ public partial class MainWindow : Window
         if (_shell is null) return;
         _shell.FocusGlobalSearchRequested += OnFocusGlobalSearch;
         _shell.FocusPageSearchRequested += OnFocusPageSearch;
+        UpdateNarrow();
     }
 
     private void OnFocusGlobalSearch(object? sender, EventArgs e)

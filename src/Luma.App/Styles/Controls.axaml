@@ -1,6 +1,12 @@
-<Styles xmlns="https://github.com/avaloniaui"
+﻿<Styles xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:c="using:Luma.App.Controls">
+
+  <!-- ================= Scrolling ================= -->
+  <!-- Mouse-wheel scrolling eases into place instead of jumping a fixed step per notch (see SmoothScroll). -->
+  <Style Selector="ScrollViewer">
+    <Setter Property="c:SmoothScroll.IsEnabled" Value="True" />
+  </Style>
 
   <!-- ================= Typography ================= -->
   <Style Selector="TextBlock">

@@ -84,6 +84,22 @@ public class WallpaperModelTests
         Assert.Equal(600, settings.MemoryCacheItems);
         Assert.Equal(AppSettings.AllSourcesId, settings.DefaultSource);
     }
+
+    [Fact]
+    public void Settings_migrate_moves_old_files_to_gpu_rendering_once()
+    {
+        var old = new AppSettings { RenderingMode = RenderingMode.Efficient, SettingsVersion = 0 };
+        Assert.True(old.Migrate());
+        Assert.Equal(RenderingMode.Accelerated, old.RenderingMode);
+        Assert.Equal(AppSettings.CurrentVersion, old.SettingsVersion);
+
+        // A deliberate choice made after the migration is kept.
+        old.RenderingMode = RenderingMode.Efficient;
+        Assert.False(old.Migrate());
+        Assert.Equal(RenderingMode.Efficient, old.RenderingMode);
+
+        Assert.Equal(RenderingMode.Accelerated, new AppSettings().RenderingMode);
+    }
 }
 
 public class FormattingTests

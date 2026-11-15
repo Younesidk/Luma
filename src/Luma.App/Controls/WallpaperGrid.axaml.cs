@@ -58,6 +58,7 @@ public partial class WallpaperGrid : UserControl
     private int _columns = 1;
     private ScrollViewer? _scroll;
     private bool _loadMoreQueued;
+    private DispatcherTimer? _reflowTimer;
 
     static WallpaperGrid()
     {
@@ -154,7 +155,7 @@ public partial class WallpaperGrid : UserControl
         if (Header is not null) Header.DataContext = DataContext;
     }
 
-    private void UpdateLayoutMetrics(bool force)
+    private void UpdateLayoutMetrics(bool force, bool settled = false)
     {
         var padding = GridPadding;
         var available = Bounds.Width - padding.Left - padding.Right - ScrollbarAllowance;
@@ -163,16 +164,64 @@ public partial class WallpaperGrid : UserControl
         var min = Math.Max(120, MinCardWidth);
         var gap = Math.Max(0, Gap);
         var columns = Math.Max(1, (int)Math.Floor((available + gap) / (min + gap)));
-        var width = Math.Floor((available - gap * (columns - 1)) / columns);
+        // On narrow windows flooring left one or two oversized cards; allow cards down to ~80% of the minimum instead.
+        if ((available - gap * (columns - 1)) / columns > min * 1.6 && (available - gap * columns) / (columns + 1) >= min * 0.8) columns++;
 
-        var changedColumns = columns != _columns;
-        _columns = columns;
-        if (Math.Abs(width - CardWidth) > 0.5)
+        // While the size is still changing (dragging the window edge, the sidebar collapsing) rebuilding every row on each
+        // frame made the gallery stutter and flash. Keep the current rows and just scale the cards to fit; reflow into the
+        // new column count once the size has settled for a moment.
+        if (columns != _columns && !force && !settled && _wallRows.Count > 0)
         {
-            CardWidth = width;
-            CardHeight = Math.Round(width * CardAspect);
+            SetCardSize(Math.Max(60, Math.Floor((available - gap * (_columns - 1)) / _columns)));
+            _reflowTimer ??= new DispatcherTimer(TimeSpan.FromMilliseconds(140), DispatcherPriority.Background, (_, _) =>
+            {
+                _reflowTimer!.Stop();
+                UpdateLayoutMetrics(force: false, settled: true);
+            });
+            _reflowTimer.Stop();
+            _reflowTimer.Start();
+            return;
         }
-        if (changedColumns || force) Rebuild();
+
+        _reflowTimer?.Stop();
+        var changedColumns = columns != _columns;
+        var anchor = changedColumns ? CaptureScrollAnchor() : -1;
+        _columns = columns;
+        SetCardSize(Math.Floor((available - gap * (columns - 1)) / columns));
+        if (changedColumns || force)
+        {
+            Rebuild();
+            if (anchor >= 0) RestoreScrollAnchor(anchor);
+        }
+    }
+
+    private void SetCardSize(double width)
+    {
+        if (Math.Abs(width - CardWidth) <= 0.5) return;
+        CardWidth = width;
+        CardHeight = Math.Round(width * CardAspect);
+    }
+
+    private double RowHeight => CardHeight + 16;
+
+    private double HeaderHeight => _headerRow is { Content.IsVisible: true } header ? header.Content.DesiredSize.Height : 0;
+
+    /// <summary>Index of the first wallpaper in view, so a reflow keeps the same wallpapers on screen instead of jumping.</summary>
+    private int CaptureScrollAnchor()
+    {
+        if (_scroll is null || _wallRows.Count == 0) return -1;
+        var intoRows = _scroll.Offset.Y - HeaderHeight;
+        if (intoRows <= 0) return -1;
+        return (int)Math.Floor(intoRows / RowHeight) * _columns;
+    }
+
+    private void RestoreScrollAnchor(int itemIndex)
+    {
+        var target = HeaderHeight + itemIndex / Math.Max(1, _columns) * RowHeight;
+        Dispatcher.UIThread.Post(() =>
+        {
+            if (_scroll is not null) _scroll.Offset = new Vector(_scroll.Offset.X, target);
+        }, DispatcherPriority.Loaded);
     }
 
     private void Rebuild()
@@ -250,15 +299,15 @@ public partial class WallpaperGrid : UserControl
         Dispatcher.UIThread.Post(() =>
         {
             _loadMoreQueued = false;
-            HookScroll();            if (_scroll is null || !HasMore || IsLoadingMore || IsLoading || _scroll.Viewport.Height <= 0) return;
+            HookScroll();
+            if (_scroll is null || !HasMore || IsLoadingMore || IsLoading || _scroll.Viewport.Height <= 0) return;
 
             // Do not trust the scroll extent while rows are still being realised; derive the content height from the
             // (fixed) row geometry instead so a half-finished layout can never trigger a cascade of extra page loads.
-            var rowHeight = CardHeight + 16;
-            var headerHeight = _headerRow is { Content.IsVisible: true } ? 340 : 0;
-            var expected = headerHeight + _wallRows.Count * rowHeight + 70;
+            var expected = HeaderHeight + _wallRows.Count * RowHeight + 70;
             var content = Math.Max(_scroll.Extent.Height, expected);
-            var remaining = content - (_scroll.Offset.Y + _scroll.Viewport.Height);            if (remaining < 700 && LoadMoreCommand?.CanExecute(null) == true) LoadMoreCommand.Execute(null);
+            var remaining = content - (_scroll.Offset.Y + _scroll.Viewport.Height);
+            if (remaining < 700 && LoadMoreCommand?.CanExecute(null) == true) LoadMoreCommand.Execute(null);
         }, DispatcherPriority.Background);
     }
 

@@ -1,4 +1,4 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 using Avalonia;
 using Avalonia.Win32;
 using Avalonia.X11;
@@ -28,7 +28,7 @@ public static class Program
             .WithInterFont()
             .LogToTrace();
 
-        // CPU rasterisation keeps Luma's memory footprint far lower than GPU-backed rendering (no driver textures).
+        // GPU rendering is the default for smooth animation; the opt-in CPU rasteriser trades that for a much lower memory footprint.
         if (UseSoftwareRendering())
         {
             if (OperatingSystem.IsWindows())
@@ -41,7 +41,8 @@ public static class Program
 
     /// <summary>
     /// Decides the renderer before any window exists. LUMA_RENDERING=software|accelerated overrides the saved setting
-    /// ("RenderingMode" in settings.json); the default is the efficient software renderer.
+    /// ("RenderingMode" in settings.json); the default is GPU rendering. Mirrors <see cref="Luma.Core.Models.AppSettings.Migrate"/>:
+    /// a settings file from before versioning is treated as accelerated, because the old "Efficient" value there was only the old default.
     /// </summary>
     private static bool UseSoftwareRendering()
     {
@@ -51,15 +52,18 @@ public static class Program
         try
         {
             var path = new LumaPaths().SettingsPath;
-            if (!File.Exists(path)) return true;
+            if (!File.Exists(path)) return false;
             using var document = JsonDocument.Parse(File.ReadAllText(path), new JsonDocumentOptions { AllowTrailingCommas = true, CommentHandling = JsonCommentHandling.Skip });
-            if (document.RootElement.TryGetProperty("RenderingMode", out var value) && value.ValueKind == JsonValueKind.String)
-                return !string.Equals(value.GetString(), "Accelerated", StringComparison.OrdinalIgnoreCase);
+            var root = document.RootElement;
+            var version = root.TryGetProperty("SettingsVersion", out var v) && v.ValueKind == JsonValueKind.Number && v.TryGetInt32(out var n) ? n : 0;
+            if (version < 1) return false;
+            if (root.TryGetProperty("RenderingMode", out var value) && value.ValueKind == JsonValueKind.String)
+                return string.Equals(value.GetString(), "Efficient", StringComparison.OrdinalIgnoreCase);
         }
         catch (Exception ex) when (ex is IOException or JsonException or UnauthorizedAccessException)
         {
             // An unreadable settings file must never prevent start-up; fall through to the default.
         }
-        return true;
+        return false;
     }
 }

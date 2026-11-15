@@ -1,4 +1,4 @@
-using Luma.Core.Enums;
+﻿using Luma.Core.Enums;
 
 namespace Luma.Core.Models;
 
@@ -14,7 +14,15 @@ public sealed class AppSettings
     public bool SidebarCompact { get; set; }
 
     /// <summary>Takes effect on the next start (the renderer is chosen before any window exists).</summary>
-    public RenderingMode RenderingMode { get; set; } = RenderingMode.Efficient;
+    public RenderingMode RenderingMode { get; set; } = RenderingMode.Accelerated;
+
+    /// <summary>
+    /// Version of the settings file's defaults. Files written before versioning existed read as 0; see <see cref="Migrate"/>.
+    /// Deliberately not initialised to <see cref="CurrentVersion"/>: a missing property must read as "old file".
+    /// </summary>
+    public int SettingsVersion { get; set; }
+
+    public const int CurrentVersion = 1;
 
     // Downloads
     /// <summary>Custom download directory. Null/empty means the default location inside Luma's data directory.</summary>
@@ -46,6 +54,20 @@ public sealed class AppSettings
     public int MaxConcurrentDownloads { get; set; } = 3;
 
     public AppSettings Clone() => (AppSettings)MemberwiseClone();
+
+    /// <summary>
+    /// Brings settings written by older versions up to date. Returns true when something changed (so it gets saved).
+    /// v1: GPU rendering became the default. Every older file stored "Efficient" (all settings are written out, not only
+    /// changed ones), so there is no telling a deliberate choice from the old default; move everyone over once. Anyone
+    /// who prefers the low-memory renderer can switch back in Settings and it sticks from then on.
+    /// </summary>
+    public bool Migrate()
+    {
+        if (SettingsVersion >= CurrentVersion) return false;
+        if (SettingsVersion < 1) RenderingMode = RenderingMode.Accelerated;
+        SettingsVersion = CurrentVersion;
+        return true;
+    }
 
     /// <summary>Clamps values to sane ranges so a hand-edited settings file can never break the app.</summary>
     public void Normalize()

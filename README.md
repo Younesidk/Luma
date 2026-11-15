@@ -376,9 +376,10 @@ the targets (the extra is shared runtime pages); heavy browsing is just under. T
 depends on the machine.
 
 What keeps it low: lazy, cancellable thumbnail loading; thumbnails decoded to display width; virtualised rows; a bounded
-LRU decode cache (default 80 thumbnails ≈ 30 MB); bounded decode and HTTP concurrency; single preview image; and the
-default **Efficient** renderer. GPU rendering costs roughly 100 MB more (idle private WS ≈ 165 MB vs 65 MB); switch it
-in Settings → Performance → Graphics if you prefer smoother animation on very high resolution displays.
+LRU decode cache (default 80 thumbnails ≈ 30 MB); bounded decode and HTTP concurrency; and a single preview image.
+The figures above were measured with the CPU (**Efficient**) renderer. Luma now defaults to **Accelerated** (GPU)
+rendering for smooth scrolling and animation, which costs roughly 100 MB more (idle private WS ≈ 165 MB vs 65 MB);
+switch to Efficient in Settings → Performance → Graphics if memory matters more than smoothness.
 Set `LUMA_MEMLOG=1` to write a memory sample to the log every 4 seconds.
 
 Start-up shows the window first; the database opens afterwards and Discover only calls the network once it is visible.
