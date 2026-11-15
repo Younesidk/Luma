@@ -1,4 +1,4 @@
-﻿using System.Collections.ObjectModel;
+using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Reflection;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -51,7 +51,7 @@ public sealed partial class ShellViewModel : ObservableObject
     private PageViewModel? _activePage;
 
     public ShellViewModel(DiscoverViewModel discover, FavoritesViewModel favorites, CollectionsViewModel collections,
-        DownloadsViewModel downloads, HistoryViewModel history, SettingsViewModel settings, NavigationService navigation,
+        DownloadsViewModel downloads, HistoryViewModel history, FeedbackViewModel feedback, SettingsViewModel settings, NavigationService navigation,
         PreviewService preview, DialogService dialogs, ToastService toasts, ISettingsService settingsService, ShellStartup startup,
         UpdateViewModel updates)
     {
@@ -71,6 +71,7 @@ public sealed partial class ShellViewModel : ObservableObject
             [AppPage.Collections] = collections,
             [AppPage.Downloads] = downloads,
             [AppPage.History] = history,
+            [AppPage.Feedback] = feedback,
             [AppPage.Settings] = settings
         };
 
@@ -87,7 +88,11 @@ public sealed partial class ShellViewModel : ObservableObject
             new("wallhaven", "Wallhaven", "Icon.Mountain", AppPage.Discover, "wallhaven"),
             new("openverse", "Openverse", "Icon.Globe", AppPage.Discover, "openverse")
         ];
-        SystemItems = [new("settings", "Settings", "Icon.Sliders", AppPage.Settings)];
+        SystemItems =
+        [
+            new("feedback", "Feedback", "Icon.Message", AppPage.Feedback),
+            new("settings", "Settings", "Icon.Sliders", AppPage.Settings)
+        ];
 
         _currentPage = discover;
         _isSidebarCompact = settingsService.Current.SidebarCompact;
@@ -132,9 +137,6 @@ public sealed partial class ShellViewModel : ObservableObject
     [ObservableProperty]
     private bool _isSidebarCompact;
 
-    [ObservableProperty]
-    private string _globalSearchText = string.Empty;
-
     /// <summary>Set by the window: on narrow windows the sidebar collapses to icons without changing the saved preference.</summary>
     [ObservableProperty]
     private bool _isWindowNarrow;
@@ -167,11 +169,7 @@ public sealed partial class ShellViewModel : ObservableObject
         OnPropertyChanged(nameof(SidebarWidth));
     }
 
-    public event EventHandler? FocusGlobalSearchRequested;
-
     public event EventHandler? FocusPageSearchRequested;
-
-    public void RequestFocusGlobalSearch() => FocusGlobalSearchRequested?.Invoke(this, EventArgs.Empty);
 
     public void RequestFocusPageSearch() => FocusPageSearchRequested?.Invoke(this, EventArgs.Empty);
 
@@ -206,15 +204,6 @@ public sealed partial class ShellViewModel : ObservableObject
 
     [RelayCommand]
     public void NavigateTo(AppPage page) => Navigate(new NavigationRequest(page, null, null));
-
-    [RelayCommand]
-    private void SubmitGlobalSearch()
-    {
-        var text = GlobalSearchText.Trim();
-        if (text.Length == 0) return;
-        Navigate(new NavigationRequest(AppPage.Discover, Discover.SelectedSource.Id, text));
-        GlobalSearchText = string.Empty;
-    }
 
     [RelayCommand]
     public void ClosePreview() => Preview.Close();

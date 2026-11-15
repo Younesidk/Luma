@@ -44,7 +44,7 @@ no backend server.
 - **Automatic rotation** (while Luma is running) through downloaded wallpapers, favourites or a collection, random or
   sequential, never repeating the current wallpaper while alternatives exist. Missing files are skipped.
 - **Themes**: dark (default), light and "match system", six accent colours, comfortable/compact gallery density,
-  collapsible sidebar. Keyboard shortcuts: `Ctrl+K` global search, `Ctrl+F` page search, `Ctrl+,` settings,
+  collapsible sidebar. Keyboard shortcuts: `Ctrl+K` Discover search, `Ctrl+F` page search, `Ctrl+,` settings,
   `Ctrl+R` / `F5` refresh, `Esc` closes the preview or dialog.
 
 ## Technology

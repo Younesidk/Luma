@@ -47,4 +47,5 @@
   <StreamGeometry x:Key="Icon.Sparkle">M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z</StreamGeometry>
   <StreamGeometry x:Key="Icon.Copy">M10 8h9a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-9a2 2 0 0 1-2-2v-9a2 2 0 0 1 2-2Z M4 16c-1.1 0-2-.9-2-2V5a2 2 0 0 1 2-2h9c1.1 0 2 .9 2 2</StreamGeometry>
   <StreamGeometry x:Key="Icon.Key">M21 2l-2 2 M15.39 7.61L19 4 M7.5 20.5A5.5 5.5 0 1 0 7.5 9.5A5.5 5.5 0 0 0 7.5 20.5Z M15.5 7.5l3 3L22 7l-3-3</StreamGeometry>
+  <StreamGeometry x:Key="Icon.Message">M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z</StreamGeometry>
 </ResourceDictionary>

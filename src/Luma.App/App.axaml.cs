@@ -141,6 +141,7 @@ public sealed class PageViewLocator : IDataTemplate
             CollectionsViewModel => new CollectionsView(),
             DownloadsViewModel => new DownloadsView(),
             HistoryViewModel => new HistoryView(),
+            FeedbackViewModel => new FeedbackView(),
             SettingsViewModel => new SettingsView(),
             _ => null
         };

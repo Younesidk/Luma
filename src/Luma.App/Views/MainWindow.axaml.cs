@@ -122,34 +122,18 @@ public partial class MainWindow : Window
     private void AttachShell()
     {
         if (_shell is not null)
-        {
-            _shell.FocusGlobalSearchRequested -= OnFocusGlobalSearch;
             _shell.FocusPageSearchRequested -= OnFocusPageSearch;
-        }
         _shell = DataContext as ShellViewModel;
         if (_shell is null) return;
-        _shell.FocusGlobalSearchRequested += OnFocusGlobalSearch;
         _shell.FocusPageSearchRequested += OnFocusPageSearch;
         UpdateNarrow();
-    }
-
-    private void OnFocusGlobalSearch(object? sender, EventArgs e)
-    {
-        var box = this.FindControl<TextBox>("GlobalSearch");
-        if (box is null) return;
-        box.Focus();
-        box.SelectAll();
     }
 
     private void OnFocusPageSearch(object? sender, EventArgs e)
     {
         var host = this.FindControl<TransitioningContentControl>("PageHost");
         var box = host?.GetVisualDescendants().OfType<TextBox>().FirstOrDefault(t => t.Name == "PageSearch" && t.IsEffectivelyVisible);
-        if (box is null)
-        {
-            OnFocusGlobalSearch(sender, e);
-            return;
-        }
+        if (box is null) return;
         box.Focus();
         box.SelectAll();
     }
@@ -172,7 +156,9 @@ public partial class MainWindow : Window
 
         if (ctrl && e.Key == Key.K)
         {
-            _shell.RequestFocusGlobalSearch();
+            // Ctrl+K jumps to Discover and focuses its search box (the page may need a layout pass to appear first).
+            if (_shell.CurrentPage is not DiscoverViewModel) _shell.NavigateTo(Services.AppPage.Discover);
+            Avalonia.Threading.Dispatcher.UIThread.Post(_shell.RequestFocusPageSearch, Avalonia.Threading.DispatcherPriority.Loaded);
             e.Handled = true;
         }
         else if (ctrl && e.Key == Key.F)

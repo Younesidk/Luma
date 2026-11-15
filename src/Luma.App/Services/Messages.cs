@@ -15,5 +15,6 @@ public enum AppPage
     Collections,
     Downloads,
     History,
+    Feedback,
     Settings
 }

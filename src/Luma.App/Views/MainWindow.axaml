@@ -128,33 +128,10 @@
       <!-- ===================== Content ===================== -->
       <Grid Grid.Column="1" RowDefinitions="Auto,*">
 
-        <!-- Title bar: global search + window controls -->
+        <!-- Title bar: drag area + window controls -->
         <Border x:Name="TitleBar" Grid.Row="0" Height="56" Background="Transparent">
-          <Grid>
-            <Grid.ColumnDefinitions>
-              <!-- The search box shrinks with the window (up to 380 wide) so it never crowds the window controls. -->
-              <ColumnDefinition Width="*" MaxWidth="412" />
-              <ColumnDefinition Width="0.001*" />
-              <ColumnDefinition Width="Auto" />
-            </Grid.ColumnDefinitions>
-            <Border Grid.Column="0" x:Name="GlobalSearchBox" Height="38" Margin="32,0,16,0"
-                    CornerRadius="12" Background="{DynamicResource LumaSurfaceBrush}" BorderBrush="{DynamicResource LumaBorderSubtleBrush}" BorderThickness="1">
-              <Grid ColumnDefinitions="Auto,*,Auto" Margin="12,0,10,0">
-                <c:Icon Data="{StaticResource Icon.Search}" Size="16" Foreground="{DynamicResource LumaTextTertiaryBrush}" VerticalAlignment="Center" />
-                <TextBox x:Name="GlobalSearch" Grid.Column="1" Classes="bare" Margin="10,0,6,0" VerticalAlignment="Center"
-                         PlaceholderText="Search all wallpapers" Text="{Binding GlobalSearchText}"
-                         AutomationProperties.Name="Search wallpapers">
-                  <TextBox.KeyBindings>
-                    <KeyBinding Gesture="Enter" Command="{Binding SubmitGlobalSearchCommand}" />
-                  </TextBox.KeyBindings>
-                </TextBox>
-                <Border Grid.Column="2" Classes="pill" VerticalAlignment="Center">
-                  <TextBlock Text="Ctrl K" FontSize="11" Foreground="{DynamicResource LumaTextTertiaryBrush}" />
-                </Border>
-              </Grid>
-            </Border>
-
-            <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Top">
+          <Grid ColumnDefinitions="*,Auto">
+            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Top">
               <Button Classes="caption" x:Name="MinimizeButton" ToolTip.Tip="Minimize" AutomationProperties.Name="Minimize"><c:Icon Data="{StaticResource Icon.Minimize}" Size="14" /></Button>
               <Button Classes="caption" x:Name="MaximizeButton" ToolTip.Tip="Maximize" AutomationProperties.Name="Maximize or restore">
                 <c:Icon x:Name="MaximizeIcon" Data="{StaticResource Icon.Maximize}" Size="13" />

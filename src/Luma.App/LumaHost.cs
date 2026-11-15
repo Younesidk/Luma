@@ -34,6 +34,7 @@ public static class LumaHost
         services.Configure<LumaOptions>(configuration.GetSection(LumaOptions.SectionName));
         services.AddLumaInfrastructure(paths);
         services.Configure<LumaUpdateOptions>(configuration.GetSection(LumaUpdateOptions.SectionName));
+        services.Configure<LumaFeedbackOptions>(configuration.GetSection(LumaFeedbackOptions.SectionName));
         AddApplication(services);
         return services.BuildServiceProvider(new ServiceProviderOptions { ValidateOnBuild = false, ValidateScopes = false });
     }
@@ -63,12 +64,15 @@ public static class LumaHost
         services.AddSingleton<UpdateService>();
         services.AddSingleton<IUpdateService>(sp => sp.GetRequiredService<UpdateService>());
         services.AddSingleton<UpdateViewModel>();
+        services.AddHttpClient(FeedbackService.HttpClientName, c => c.Timeout = TimeSpan.FromSeconds(20));
+        services.AddSingleton<FeedbackService>();
 
         services.AddSingleton<DiscoverViewModel>();
         services.AddSingleton<FavoritesViewModel>();
         services.AddSingleton<CollectionsViewModel>();
         services.AddSingleton<DownloadsViewModel>();
         services.AddSingleton<HistoryViewModel>();
+        services.AddSingleton<FeedbackViewModel>();
         services.AddSingleton<SettingsViewModel>();
     }
 
