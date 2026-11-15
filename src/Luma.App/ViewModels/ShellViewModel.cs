@@ -251,15 +251,20 @@ public sealed partial class ShellViewModel : ObservableObject
 
     private void UpdateActive()
     {
-        string active = CurrentPage switch
-        {
-            DiscoverViewModel d => d.SelectedSource.Id == AppSettings.AllSourcesId ? "discover" : d.SelectedSource.Id,
-            FavoritesViewModel => "favorites",
-            CollectionsViewModel => "collections",
-            DownloadsViewModel => "downloads",
-            HistoryViewModel => "history",
-            _ => "settings"
-        };
+        var active = ActiveNavId(CurrentPage);
         foreach (var item in LibraryItems.Concat(SourceItems).Concat(SystemItems)) item.IsActive = item.Id == active;
     }
+
+    /// <summary>The sidebar item to highlight for a page. Unknown pages highlight nothing rather than a wrong item.</summary>
+    public static string? ActiveNavId(PageViewModel page) => page switch
+    {
+        DiscoverViewModel d => d.SelectedSource.Id == AppSettings.AllSourcesId ? "discover" : d.SelectedSource.Id,
+        FavoritesViewModel => "favorites",
+        CollectionsViewModel => "collections",
+        DownloadsViewModel => "downloads",
+        HistoryViewModel => "history",
+        FeedbackViewModel => "feedback",
+        SettingsViewModel => "settings",
+        _ => null
+    };
 }

@@ -35,6 +35,13 @@ public class FeedbackTests
         new(new StubFactory(handler), Options.Create(new LumaFeedbackOptions { WebhookUrl = url }), NullLogger<FeedbackService>.Instance);
 
     [Fact]
+    public void Feedback_page_highlights_the_feedback_sidebar_item()
+    {
+        var vm = new FeedbackViewModel(Service(new StubHandler(HttpStatusCode.NoContent)), new NullToasts());
+        Assert.Equal("feedback", ShellViewModel.ActiveNavId(vm));
+    }
+
+    [Fact]
     public void Payload_has_type_in_title_and_blocks_mentions()
     {
         var payload = FeedbackService.BuildPayload(new FeedbackSubmission(FeedbackType.Bug, "  Crash  ", "@everyone it broke"), "1.1.0", "Windows");
