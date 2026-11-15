@@ -77,6 +77,26 @@
     <!-- No Background transition on purpose: fading from Transparent (black, alpha 0) to a
          translucent hover brush passes through a bright grey and shows up as a flash. -->
   </Style>
+  <!-- Fluent's Button theme still styles "/template/ ContentPresenter#PART_ContentPresenter" on
+       hover/press/disabled (grey fill + light border). Our template reuses that name, so without
+       these overrides Fluent paints a second highlight box inside every button. -->
+  <Style Selector="Button /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderBrush" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+  </Style>
+  <Style Selector="Button:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderBrush" Value="Transparent" />
+  </Style>
+  <Style Selector="Button:pressed /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderBrush" Value="Transparent" />
+  </Style>
+  <Style Selector="Button:disabled /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderBrush" Value="Transparent" />
+  </Style>
   <Style Selector="Button:pointerover"><Setter Property="Background" Value="{DynamicResource LumaHoverBrush}" /></Style>
   <Style Selector="Button:pressed"><Setter Property="Background" Value="{DynamicResource LumaPressedBrush}" /></Style>
   <Style Selector="Button:disabled"><Setter Property="Opacity" Value="0.42" /></Style>
