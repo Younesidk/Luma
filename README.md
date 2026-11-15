@@ -57,7 +57,7 @@ no backend server.
 | Data | SQLite + EF Core 11 with migrations |
 | HTTP | `IHttpClientFactory` named clients |
 | DI / config / logging | Microsoft.Extensions.* and Serilog (rolling file sink) |
-| Tests | xUnit (132 tests) |
+| Tests | xUnit (167 tests) |
 
 ## Architecture
 
@@ -126,8 +126,8 @@ in `Releases/` (git-ignored):
 | `Luma.Desktop-<version>-full.nupkg` | Full update package | Yes |
 | `Luma.Desktop-<version>-delta.nupkg` | Small update from the previous version (only when one was found) | Yes |
 | `releases.win.json` | Release feed that installed copies read | Yes |
-| `RELEASES` | Legacy feed (older Velopack/Squirrel clients) | Yes |
-| `Luma.Desktop-win-Portable.zip` | Portable build | Optional |
+| `RELEASES` | Legacy feed for old Squirrel/Velopack clients; Luma has none, so it is uploaded by vpk but not required | Automatic |
+| `Luma.Desktop-win-Portable.zip` | Portable build (optional download) | Optional |
 | `assets.win.json` | List of files for `vpk upload` | No |
 
 The installer is per-user: it installs into `%LocalAppData%\Luma.Desktop`, creates Start menu and desktop shortcuts
@@ -144,29 +144,78 @@ GitHub Releases are the single source of truth. Installed copies of Luma check
 `https://github.com/Younesidk/Luma` for the newest **stable** release (drafts and prereleases are ignored; no token
 is used or embedded).
 
-### Publishing a new version
+### Publishing a new version (GitHub Actions)
 
-1. Bump `<Version>` in `Directory.Build.props` (for example `1.1.0`). This is the only version number.
-2. Optionally write `release-notes/1.1.0.md`; it appears under "What's new" in the update card.
-3. Package:
+Releases are built and published by GitHub Actions when you push a version tag. You never upload files by hand.
+
+**Workflows**
+
+| Workflow | File | Runs on | Does |
+|---|---|---|---|
+| CI | `.github/workflows/ci.yml` | every push (branches) and pull request | restore, Release build, full test suite on Windows; fails on any build error or failed test; uploads the `.trx` results and writes a summary |
+| Release | `.github/workflows/release.yml` | pushing a tag `vX.Y.Z` (or `vX.Y.Z-suffix`) | validates, builds, tests, packages with `scripts/build-installer.ps1`, creates the GitHub Release and uploads the files |
+
+**To release a new version**
+
+1. Bump `<Version>` in `Directory.Build.props` (the only version number), e.g. `1.1.0`.
+2. Optionally write `release-notes/1.1.0.md` (shown under "What's new" in the update card).
+3. Make sure CI is green, then commit and push to `main`:
    ```powershell
-   ./scripts/build-installer.ps1
+   git add Directory.Build.props release-notes
+   git commit -m "Release 1.1.0"
+   git push origin main
    ```
-4. Commit, then publish the release, either:
-   - **with vpk** (creates the tag and release and uploads exactly the right files):
-     ```powershell
-     dotnet vpk upload github --repoUrl https://github.com/Younesidk/Luma --channel win --outputDir Releases --tag v1.1.0 --releaseName "Luma 1.1.0" --publish --token <github-token>
-     ```
-     The token is a fine-grained personal access token with *Contents: read and write* on this repository. Pass it
-     on the command line or via an environment variable; never commit it.
-   - **or by hand**: create a release with tag `v1.1.0` on github.com, attach the "Yes" files from the table
-     above, and publish it (not as a draft, not as a prerelease).
-5. Installed copies find the update about 20 seconds after their next start (and every 6 hours while running),
-   or immediately via *Settings → About Luma → Check for updates*.
+4. Create and push the tag. It must be `v` + exactly the version from step 1:
+   ```powershell
+   git tag v1.1.0
+   git push origin v1.1.0
+   ```
+5. Watch the **Release** run in the repository's *Actions* tab. When it finishes, the release is public and installed
+   copies pick it up about 20 seconds after their next start (or via *Settings → About Luma → Check for updates*).
 
-Build each release from a `Releases/` folder that contains the previous release (the script downloads it), and
-publish releases in version order, so the delta chain stays intact. If a delta is missing, Velopack falls back to the
-full package automatically.
+**What the Release workflow does automatically**
+
+1. Checks the tag looks like `vX.Y.Z`, equals `<Version>` in `Directory.Build.props`, points at a commit on `main`, and
+   that no GitHub release for that tag exists yet.
+2. Restores, builds (Release) and runs the whole test suite. Any failure stops the release before anything is published.
+3. Runs `scripts/build-installer.ps1`: publishes self-contained, downloads the previous published release to build a
+   delta package, and runs `vpk pack`.
+4. Verifies `Setup.exe`, the full package, `releases.win.json`, `RELEASES` exist; keeps a 30-day copy as a workflow artifact.
+5. Runs `vpk upload github` **as a draft** (no `--publish`, no `--merge`), then checks the draft: exactly one release for
+   the tag, still a draft, the right pre-release flag, and the **required** assets present, fully uploaded and the same
+   size as the local files: `Luma.Desktop-win-Setup.exe`, the full package and (when built) the delta package. It also
+   downloads `releases.win.json` (the feed installed copies read) and checks it lists these packages with matching
+   SHA256 hashes. The portable zip and the legacy `RELEASES` file are optional extras: published when vpk uploads
+   them, never blocking. Any other unexpected asset fails the run.
+6. Only then publishes that verified draft and re-checks it. If anything fails, the release stays a draft and nothing
+   is public.
+
+It uses only the built-in `GITHUB_TOKEN` with `contents: write`. No secrets are stored in the repository.
+A tag containing a hyphen (`v1.2.0-beta.1`) is published as a **pre-release**, which installed copies ignore;
+plain `vX.Y.Z` tags are stable. Release runs never overlap and are never cancelled half way.
+
+**Troubleshooting a failed release**
+
+| Symptom | Fix |
+|---|---|
+| "Tag says X but Directory.Build.props is Y" | Version and tag differ. Fix `<Version>`, commit and push, then move the tag (below). |
+| "not on main" | Merge to `main` first, then tag the `main` commit. |
+| "A release for vX already exists" | Drafts count. Delete that release on GitHub first (the workflow never reuses or merges into one). Untagged drafts are ignored. |
+| Tests/build failed | Fix on `main`, then move the tag (below). Nothing was published. |
+| Draft verification or upload failed | The release is left as a draft (never public). Inspect it, delete the draft (and tag if re-tagging), then re-run the job. Re-runs refuse to start while a release for the tag exists. |
+| No delta package | Normal for the first release, or when the previous release could not be downloaded; the full package still updates. |
+
+Move a tag after fixing (only when its release was not published): 
+```powershell
+git push origin :refs/tags/v1.1.0   # delete the remote tag
+git tag -f v1.1.0                   # re-point locally at HEAD
+git push origin v1.1.0
+```
+Never reuse a version number that was already published and downloaded by users: bump to the next one instead.
+
+**Manual fallback** (without Actions): `./scripts/build-installer.ps1`, then
+`dotnet vpk upload github --repoUrl https://github.com/Younesidk/Luma --channel win --outputDir Releases --tag v1.1.0 --releaseName "Luma 1.1.0" --publish --token <token>`.
+If `Releases/` already contains a higher version than the one you are packing, pass `-OutputDir Releases-test` to the script.
 
 ### How updating works
 
