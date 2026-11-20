@@ -12,6 +12,7 @@ public class LumaDbContext(DbContextOptions<LumaDbContext> options) : DbContext(
     public DbSet<DownloadEntity> Downloads => Set<DownloadEntity>();
     public DbSet<WallpaperHistoryEntity> History => Set<WallpaperHistoryEntity>();
     public DbSet<AppSettingEntity> AppSettings => Set<AppSettingEntity>();
+    public DbSet<VideoWallpaperEntity> VideoWallpapers => Set<VideoWallpaperEntity>();
 
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
     {
@@ -74,6 +75,19 @@ public class LumaDbContext(DbContextOptions<LumaDbContext> options) : DbContext(
             e.HasKey(x => x.Id);
             e.HasOne(x => x.Wallpaper).WithMany().HasForeignKey(x => x.WallpaperId).OnDelete(DeleteBehavior.Cascade);
             e.HasIndex(x => x.AppliedAt);
+        });
+
+        modelBuilder.Entity<VideoWallpaperEntity>(e =>
+        {
+            e.ToTable("VideoWallpapers");
+            e.HasKey(x => x.Id);
+            e.Property(x => x.FilePath).IsRequired();
+            e.Property(x => x.Sha256).IsRequired().HasMaxLength(64);
+            e.Property(x => x.Container).IsRequired().HasMaxLength(20);
+            e.HasOne(x => x.Wallpaper).WithMany().HasForeignKey(x => x.WallpaperId).OnDelete(DeleteBehavior.Cascade);
+            e.HasIndex(x => x.WallpaperId).IsUnique();
+            e.HasIndex(x => x.Sha256).IsUnique();
+            e.HasIndex(x => x.ImportedAt);
         });
 
         modelBuilder.Entity<AppSettingEntity>(e =>

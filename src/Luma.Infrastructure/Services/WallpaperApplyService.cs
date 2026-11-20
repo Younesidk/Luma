@@ -14,7 +14,8 @@ public sealed class WallpaperApplyService(
     IHistoryService history,
     ILumaPaths paths,
     ILogger<WallpaperApplyService> logger,
-    IImageTranscoder? transcoder = null) : IWallpaperApplyService
+    IImageTranscoder? transcoder = null,
+    IVideoWallpaperService? video = null) : IWallpaperApplyService
 {
     public WallpaperApplierCapabilities Capabilities => applier.Capabilities;
 
@@ -75,6 +76,20 @@ public sealed class WallpaperApplyService(
         {
             logger.LogWarning("Applying wallpaper failed: {Reason} - {Message}", result.Reason, result.Message);
             return result;
+        }
+
+        // A static wallpaper replaces a live one. The image is already on the desktop, so removing the video window
+        // reveals it directly (no flash of the old still frame).
+        if (video is not null && video.Status.State != VideoPlaybackState.Inactive)
+        {
+            try
+            {
+                await video.DeactivateAsync();
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "The static wallpaper was applied but the video wallpaper could not be stopped");
+            }
         }
 
         if (wallpaper is not null)

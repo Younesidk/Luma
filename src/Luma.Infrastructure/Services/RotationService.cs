@@ -22,13 +22,14 @@ public sealed class RotationService : IRotationService
     private readonly IStateStore _state;
     private readonly ILogger<RotationService> _logger;
     private readonly TimeProvider _time;
+    private readonly IVideoWallpaperService? _video;
     private readonly object _lock = new();
     private CancellationTokenSource? _loopCts;
     private Task? _loop;
     private TaskCompletionSource _settingsChanged = NewSignal();
 
     public RotationService(ISettingsService settings, IDownloadLibrary library, IWallpaperApplyService applier,
-        IStateStore state, ILogger<RotationService> logger, TimeProvider? time = null)
+        IStateStore state, ILogger<RotationService> logger, TimeProvider? time = null, IVideoWallpaperService? video = null)
     {
         _settings = settings;
         _library = library;
@@ -36,6 +37,7 @@ public sealed class RotationService : IRotationService
         _state = state;
         _logger = logger;
         _time = time ?? TimeProvider.System;
+        _video = video;
     }
 
     public event EventHandler? Rotated;
@@ -134,6 +136,14 @@ public sealed class RotationService : IRotationService
                 if (completed != timer || ct.IsCancellationRequested) continue; // settings changed: re-evaluate
 
                 if (!_settings.Current.RotationEnabled) continue;
+                if (_video?.IsActive == true)
+                {
+                    // A live wallpaper the user picked wins over the schedule. Record the slot so the loop waits a full
+                    // interval again instead of firing immediately.
+                    await _state.SetAsync(LastRotationKey, _time.GetUtcNow().ToString("O", CultureInfo.InvariantCulture), ct);
+                    _logger.LogInformation("Scheduled rotation skipped: a video wallpaper is active");
+                    continue;
+                }
                 var result = await RotateNowAsync(ct);
                 if (!result.Success) _logger.LogInformation("Scheduled rotation skipped: {Message}", result.Message);
             }

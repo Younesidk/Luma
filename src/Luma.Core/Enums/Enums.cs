@@ -156,3 +156,40 @@ public enum ApplyFailureReason
     OperatingSystemRejected,
     Unknown
 }
+
+/// <summary>Video containers Luma accepts. The codec inside is checked by actually opening the file with the player.</summary>
+public enum VideoContainer
+{
+    Mp4,
+    QuickTime,
+    WebM
+}
+
+public enum VideoPlaybackState
+{
+    /// <summary>No video wallpaper is selected (a static wallpaper is in use).</summary>
+    Inactive,
+    Starting,
+    Playing,
+    Paused,
+
+    /// <summary>Playback stopped unexpectedly and Luma is retrying.</summary>
+    Recovering,
+
+    /// <summary>Playback could not be (re)started; the still frame stays on the desktop.</summary>
+    Failed
+}
+
+/// <summary>Why the video wallpaper is currently paused. Several can apply at once.</summary>
+[Flags]
+public enum PauseReasons
+{
+    None = 0,
+    User = 1,
+    FullscreenApp = 2,
+    OnBattery = 4,
+    DesktopHidden = 8,
+    SessionLocked = 16,
+    DisplaysOff = 32,
+    Suspended = 64
+}

@@ -11,6 +11,9 @@ public interface ILumaPaths
     string ThumbnailCacheDirectory { get; }
     string DefaultDownloadDirectory { get; }
     string LogsDirectory { get; }
+
+    /// <summary>Luma-managed copies of imported video wallpapers (never inside the installation folder).</summary>
+    string VideosDirectory { get; }
 }
 
 public interface ISettingsService

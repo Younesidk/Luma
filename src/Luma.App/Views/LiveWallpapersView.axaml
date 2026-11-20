@@ -1,0 +1,192 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:c="using:Luma.App.Controls"
+             xmlns:vm="using:Luma.App.ViewModels"
+             x:Class="Luma.App.Views.LiveWallpapersView"
+             x:DataType="vm:LiveWallpapersViewModel">
+
+  <UserControl.Styles>
+    <Style Selector="Border.badge">
+      <Setter Property="Background" Value="#B30B0D16" />
+      <Setter Property="CornerRadius" Value="8" />
+      <Setter Property="Padding" Value="7,3" />
+    </Style>
+    <Style Selector="Border.badge TextBlock"><Setter Property="FontSize" Value="11" /><Setter Property="Foreground" Value="#F3F3FA" /><Setter Property="FontWeight" Value="Medium" /></Style>
+    <Style Selector="Border.badge c|Icon"><Setter Property="Foreground" Value="#F3F3FA" /></Style>
+    <Style Selector="Border.video-card.active">
+      <Setter Property="BorderBrush" Value="{DynamicResource LumaAccentBrush}" />
+      <Setter Property="BorderThickness" Value="2" />
+    </Style>
+  </UserControl.Styles>
+
+  <Grid>
+    <Grid RowDefinitions="Auto,Auto,*">
+
+      <!-- Header -->
+      <Grid Grid.Row="0" Margin="32,4,32,0" ColumnDefinitions="*,Auto">
+        <StackPanel Spacing="4">
+          <TextBlock Text="Live wallpapers" Classes="display" />
+          <TextBlock Text="Videos that play behind your desktop icons while Luma is running." Classes="secondary" FontSize="14" />
+        </StackPanel>
+        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Bottom">
+          <Button Classes="icon" Height="42" Width="42" Command="{Binding OpenVideoFolderCommand}" ToolTip.Tip="Open Luma's video folder" AutomationProperties.Name="Open video folder">
+            <c:Icon Data="{StaticResource Icon.FolderOpen}" Size="18" />
+          </Button>
+          <Button Classes="secondary" Height="42" Command="{Binding ImportCommand}" IsEnabled="{Binding IsSupported}">
+            <StackPanel Orientation="Horizontal" Spacing="8"><c:Icon Data="{StaticResource Icon.Upload}" Size="16" /><TextBlock Text="Import videos" /></StackPanel>
+          </Button>
+        </StackPanel>
+      </Grid>
+
+      <StackPanel Grid.Row="1" Margin="32,20,32,8" Spacing="10">
+        <!-- Not available on this computer -->
+        <Border Classes="card" Padding="16" CornerRadius="14" IsVisible="{Binding !IsSupported}">
+          <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12">
+            <c:Icon Data="{StaticResource Icon.Info}" Size="20" Foreground="{DynamicResource LumaWarningBrush}" VerticalAlignment="Top" />
+            <TextBlock Grid.Column="1" Text="{Binding UnsupportedReason}" TextWrapping="Wrap" Classes="secondary" />
+          </Grid>
+        </Border>
+
+        <!-- Import progress -->
+        <Border Classes="card" Padding="14" CornerRadius="14" IsVisible="{Binding IsImporting}">
+          <StackPanel Spacing="8">
+            <TextBlock Text="{Binding ImportStatus}" FontWeight="Medium" TextTrimming="CharacterEllipsis" />
+            <ProgressBar Minimum="0" Maximum="100" Value="{Binding ImportProgress}" />
+            <TextBlock Text="Luma copies the video into its own folder and checks that Windows can play it." Classes="meta" />
+          </StackPanel>
+        </Border>
+
+        <!-- Now playing -->
+        <Border Classes="card" Padding="12" CornerRadius="16" IsVisible="{Binding HasActiveVideo}">
+          <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="16">
+            <Border Width="128" Height="72" CornerRadius="10" ClipToBounds="True" Background="{DynamicResource LumaSkeletonBrush}">
+              <c:ThumbnailImage Source="{Binding ActiveThumbnail}" DecodeWidth="320" />
+            </Border>
+            <StackPanel Grid.Column="1" Spacing="3" VerticalAlignment="Center">
+              <TextBlock Text="{Binding HeaderText}" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource LumaAccentSecondaryBrush}" />
+              <TextBlock Text="{Binding ActiveTitle}" FontSize="15" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+              <TextBlock Text="{Binding StatusText}" Classes="meta" />
+              <TextBlock Text="{Binding StatusMessage}" Classes="meta" TextWrapping="Wrap" IsVisible="{Binding HasStatusMessage}"
+                         Foreground="{DynamicResource LumaWarningBrush}" />
+            </StackPanel>
+            <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+              <Button Classes="secondary" Command="{Binding PauseCommand}" IsVisible="{Binding CanPause}" AutomationProperties.Name="Pause live wallpaper">
+                <StackPanel Orientation="Horizontal" Spacing="8"><c:Icon Data="{StaticResource Icon.Pause}" Size="15" /><TextBlock Text="Pause" /></StackPanel>
+              </Button>
+              <Button Classes="primary" Command="{Binding ResumeCommand}" IsVisible="{Binding CanResume}" AutomationProperties.Name="Resume live wallpaper">
+                <StackPanel Orientation="Horizontal" Spacing="8"><c:Icon Data="{StaticResource Icon.Play}" Size="15" /><TextBlock Text="Resume" /></StackPanel>
+              </Button>
+              <Button Classes="primary" Command="{Binding RetryCommand}" IsVisible="{Binding IsFailed}" IsEnabled="{Binding !IsApplying}" AutomationProperties.Name="Try again">
+                <StackPanel Orientation="Horizontal" Spacing="8"><c:Icon Data="{StaticResource Icon.Play}" Size="15" /><TextBlock Text="Try again" /></StackPanel>
+              </Button>
+              <Button Classes="secondary" Command="{Binding StopCommand}" ToolTip.Tip="Turn the video off and keep its still frame as your wallpaper" AutomationProperties.Name="Turn off live wallpaper">
+                <StackPanel Orientation="Horizontal" Spacing="8"><c:Icon Data="{StaticResource Icon.Stop}" Size="15" /><TextBlock Text="Turn off" /></StackPanel>
+              </Button>
+            </StackPanel>
+          </Grid>
+        </Border>
+      </StackPanel>
+
+      <!-- Gallery -->
+      <Grid Grid.Row="2">
+        <ScrollViewer VerticalScrollBarVisibility="Auto" IsVisible="{Binding HasItems}">
+          <ItemsControl ItemsSource="{Binding Items}" Margin="32,8,20,28">
+            <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel Orientation="Horizontal" /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="vm:VideoItemViewModel">
+                <Border Classes="card video-card" Classes.active="{Binding IsActive}" Width="290" Margin="0,0,12,12" Padding="0" CornerRadius="16" ClipToBounds="True">
+                  <StackPanel>
+                    <Button Padding="0" CornerRadius="0" Command="{Binding PreviewCommand}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch"
+                            ToolTip.Tip="Preview" AutomationProperties.Name="{Binding Title, StringFormat='Preview {0}'}">
+                      <Panel Height="163" Background="{DynamicResource LumaSkeletonBrush}">
+                        <c:ThumbnailImage Source="{Binding ThumbnailSource}" DecodeWidth="480" />
+                        <Border Classes="badge" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="10">
+                          <StackPanel Orientation="Horizontal" Spacing="5"><c:Icon Data="{StaticResource Icon.Film}" Size="12" /><TextBlock Text="Video" /></StackPanel>
+                        </Border>
+                        <Border Classes="badge" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="10">
+                          <TextBlock Text="{Binding DurationText}" />
+                        </Border>
+                        <Border Classes="badge" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="10" Background="{DynamicResource LumaAccentBrush}" IsVisible="{Binding IsActive}">
+                          <TextBlock Text="On desktop" />
+                        </Border>
+                        <c:Icon Data="{StaticResource Icon.Alert}" Size="24" Foreground="{DynamicResource LumaWarningBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" IsVisible="{Binding FileMissing}" />
+                      </Panel>
+                    </Button>
+                    <Grid ColumnDefinitions="*,Auto" Margin="14,10,8,12">
+                      <StackPanel Spacing="3" VerticalAlignment="Center">
+                        <TextBlock Text="{Binding Title}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                        <TextBlock Text="{Binding MetaText}" Classes="meta" TextTrimming="CharacterEllipsis" IsVisible="{Binding FileExists}" />
+                        <TextBlock Text="File missing — remove and import again" Classes="meta" Foreground="{DynamicResource LumaWarningBrush}" IsVisible="{Binding FileMissing}" />
+                      </StackPanel>
+                      <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="2" VerticalAlignment="Center">
+                        <Button Classes="icon" Command="{Binding ApplyCommand}" IsEnabled="{Binding FileExists}" ToolTip.Tip="Set as wallpaper" AutomationProperties.Name="Set as wallpaper">
+                          <c:Icon Data="{StaticResource Icon.Monitor}" Size="18" />
+                        </Button>
+                        <Button Classes="icon" ToolTip.Tip="More" AutomationProperties.Name="More actions">
+                          <c:Icon Data="{StaticResource Icon.More}" Size="18" />
+                          <Button.Flyout>
+                            <MenuFlyout Placement="BottomEdgeAlignedRight">
+                              <MenuItem Header="Preview" Command="{Binding PreviewCommand}" IsEnabled="{Binding FileExists}" />
+                              <MenuItem Header="Show in folder" Command="{Binding ShowInFolderCommand}" IsEnabled="{Binding FileExists}" />
+                              <MenuItem Header="Remove…" Command="{Binding RemoveCommand}" />
+                            </MenuFlyout>
+                          </Button.Flyout>
+                        </Button>
+                      </StackPanel>
+                    </Grid>
+                  </StackPanel>
+                </Border>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </ScrollViewer>
+
+        <c:EmptyState IsVisible="{Binding IsEmpty}" Icon="{StaticResource Icon.Film}" Heading="No live wallpapers yet"
+                      Message="Import an MP4, MOV or WebM video from your computer. Luma keeps its own copy, plays it muted on a loop behind your icons, and pauses it when nobody can see it.">
+          <Button Classes="primary" Content="Import videos" Command="{Binding ImportCommand}" />
+        </c:EmptyState>
+      </Grid>
+    </Grid>
+
+    <!-- ================= Preview ================= -->
+    <ThemeVariantScope RequestedThemeVariant="Dark" IsVisible="{Binding IsPreviewOpen}">
+      <Grid Background="#090B12" RowDefinitions="Auto,*,Auto">
+        <Grid Margin="24,18,24,0" ColumnDefinitions="Auto,*">
+          <Button Classes="glass" Width="40" Height="40" CornerRadius="20" Command="{Binding ClosePreviewCommand}" ToolTip.Tip="Close (Esc)" AutomationProperties.Name="Close preview">
+            <c:Icon Data="{StaticResource Icon.Close}" Size="18" />
+          </Button>
+          <StackPanel Grid.Column="1" Margin="16,0,0,0" VerticalAlignment="Center" Spacing="2">
+            <TextBlock Text="{Binding PreviewItem.Title, FallbackValue=''}" FontSize="16" FontWeight="SemiBold" Foreground="#F3F3FA" TextTrimming="CharacterEllipsis" />
+            <TextBlock Text="{Binding PreviewItem.MetaText, FallbackValue=''}" FontSize="12" Foreground="#A3A6B8" />
+          </StackPanel>
+        </Grid>
+
+        <!-- The video is drawn by a native child window: nothing may overlap this area. -->
+        <Border Grid.Row="1" Margin="48,20,48,16" CornerRadius="12" Background="Black" ClipToBounds="True">
+          <Panel>
+            <ContentControl Content="{Binding PreviewItem}" IsVisible="{Binding PreviewError, Converter={x:Static StringConverters.IsNullOrEmpty}}">
+              <ContentControl.ContentTemplate>
+                <DataTemplate x:DataType="vm:VideoItemViewModel">
+                  <c:VideoPreviewHost Source="{Binding FilePath}" Error="{Binding $parent[UserControl].((vm:LiveWallpapersViewModel)DataContext).PreviewError}" />
+                </DataTemplate>
+              </ContentControl.ContentTemplate>
+            </ContentControl>
+            <c:EmptyState IsVisible="{Binding PreviewError, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" IsDanger="True"
+                          Icon="{StaticResource Icon.Alert}" Heading="This video can't be played" Message="{Binding PreviewError}" />
+          </Panel>
+        </Border>
+
+        <Grid Grid.Row="2" Margin="48,0,48,24" ColumnDefinitions="Auto,Auto,*,Auto" ColumnSpacing="12">
+          <ComboBox Width="220" ItemsSource="{Binding DisplayOptions}" SelectedItem="{Binding SelectedDisplay}" IsVisible="{Binding ShowDisplayChoice}"
+                    AutomationProperties.Name="Show on display" ToolTip.Tip="Which display shows the video" />
+          <ComboBox Grid.Column="1" Width="200" ItemsSource="{Binding FitOptions}" SelectedItem="{Binding SelectedFit}" AutomationProperties.Name="Video fit" />
+          <TextBlock Grid.Column="2" VerticalAlignment="Center" FontSize="12" Foreground="#A3A6B8" TextWrapping="Wrap"
+                     Text="Plays muted on a loop. Pauses automatically when the desktop is hidden." />
+          <Button Grid.Column="3" Classes="primary" Height="42" Command="{Binding ApplyPreviewCommand}" IsEnabled="{Binding !IsApplying}">
+            <StackPanel Orientation="Horizontal" Spacing="8"><c:Icon Data="{StaticResource Icon.Monitor}" Size="16" /><TextBlock Text="Set as wallpaper" /></StackPanel>
+          </Button>
+        </Grid>
+      </Grid>
+    </ThemeVariantScope>
+  </Grid>
+</UserControl>

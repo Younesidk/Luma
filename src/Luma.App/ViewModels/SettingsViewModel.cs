@@ -120,12 +120,14 @@ public sealed partial class SettingsViewModel : PageViewModel
     private readonly IToastService _toasts;
     private readonly IWallpaperApplyService _apply;
     private readonly ShellStartup _startup;
+    private readonly IVideoWallpaperService _video;
+    private readonly IVideoLibrary _videoLibrary;
     private readonly ILogger<SettingsViewModel> _logger;
 
     public SettingsViewModel(ISettingsService settings, ThemeService theme, IProviderRegistry providers, IImageFetcher fetcher,
         ImageLoader imageLoader, ICollectionService collections, IRotationService rotation, IShellLauncher shell, ILumaPaths paths,
         IFileDialogService files, IDialogService dialogs, IToastService toasts, IWallpaperApplyService apply, ShellStartup startup,
-        UpdateViewModel updates, ILogger<SettingsViewModel> logger)
+        UpdateViewModel updates, IVideoWallpaperService video, IVideoLibrary videoLibrary, ILogger<SettingsViewModel> logger)
     {
         _settings = settings;
         _theme = theme;
@@ -141,6 +143,8 @@ public sealed partial class SettingsViewModel : PageViewModel
         _toasts = toasts;
         _apply = apply;
         _startup = startup;
+        _video = video;
+        _videoLibrary = videoLibrary;
         Updates = updates;
         _logger = logger;
 
@@ -381,6 +385,47 @@ public sealed partial class SettingsViewModel : PageViewModel
         RefreshRotationText();
     }
 
+    // ----- Live wallpapers -----
+
+    public bool CanUseLiveWallpapers => _video.Capabilities.IsSupported;
+    public string? LiveWallpaperSupportNote => _video.Capabilities.Notes;
+    public string LiveWallpaperSummary => CanUseLiveWallpapers ? "Supported" : "Not available";
+    public string VideosDirectory => _videoLibrary.Directory;
+
+    [ObservableProperty]
+    private string _videoStorageText = string.Empty;
+
+    public bool VideoPauseOnFullscreen
+    {
+        get => S.VideoPauseOnFullscreen;
+        set => Set(s => s.VideoPauseOnFullscreen, (s, v) => s.VideoPauseOnFullscreen = v, value);
+    }
+
+    public bool VideoPauseOnBattery
+    {
+        get => S.VideoPauseOnBattery;
+        set => Set(s => s.VideoPauseOnBattery, (s, v) => s.VideoPauseOnBattery = v, value);
+    }
+
+    [RelayCommand]
+    private void OpenVideoFolder() => OpenFolder(_videoLibrary.Directory);
+
+    private async Task RefreshVideoStorageAsync()
+    {
+        try
+        {
+            var videos = await _videoLibrary.GetAllAsync();
+            VideoStorageText = videos.Count == 0
+                ? $"{_videoLibrary.Directory}  ·  empty"
+                : $"{_videoLibrary.Directory}  ·  {videos.Count} {(videos.Count == 1 ? "video" : "videos")}, {ByteSizeFormatter.Format(videos.Sum(v => v.FileSizeBytes))}";
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Could not measure the video folder");
+            VideoStorageText = _videoLibrary.Directory;
+        }
+    }
+
     // ----- Performance -----
 
     public int ThumbnailCacheMegabytes
@@ -469,6 +514,7 @@ public sealed partial class SettingsViewModel : PageViewModel
             CollectionOptions.Add(new Option<long?>("Choose a collection…", null));
             foreach (var c in collections) CollectionOptions.Add(new Option<long?>(c.Name, c.Id));
             OnPropertyChanged(nameof(SelectedRotationCollection));
+            await RefreshVideoStorageAsync();
         }
         catch (Exception ex)
         {

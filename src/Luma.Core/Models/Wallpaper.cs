@@ -42,6 +42,9 @@ public sealed record Wallpaper
     /// <summary>Set when the wallpaper exists on disk inside the local library.</summary>
     public string? LocalFilePath { get; init; }
 
+    /// <summary>True for video wallpapers (FileType "video/..."). Providers that offer videos set the MIME type accordingly.</summary>
+    public bool IsVideo => FileType?.StartsWith("video/", StringComparison.OrdinalIgnoreCase) == true;
+
     /// <summary>Stable key that is unique across providers.</summary>
     public string Key => MakeKey(ProviderId, ExternalId);
 

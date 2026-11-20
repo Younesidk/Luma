@@ -14,6 +14,7 @@ public enum AppPage
     Favorites,
     Collections,
     Downloads,
+    Live,
     History,
     Feedback,
     Settings

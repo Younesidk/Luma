@@ -11,6 +11,9 @@
   <StreamGeometry x:Key="Icon.Mountain">M8 3l4 8 5-5 5 15H2L8 3z</StreamGeometry>
   <StreamGeometry x:Key="Icon.Globe">M12 22A10 10 0 1 0 12 2A10 10 0 0 0 12 22Z M2 12h20 M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z</StreamGeometry>
   <StreamGeometry x:Key="Icon.Image">M5 3h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Z M9 11A2 2 0 1 0 9 7A2 2 0 0 0 9 11Z M21 15l-3.086-3.086a2 2 0 0 0-2.828 0L6 21</StreamGeometry>
+  <StreamGeometry x:Key="Icon.Film">M5 3h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Z M7 3v18 M3 7.5h4 M3 12h18 M3 16.5h4 M17 3v18 M17 7.5h4 M17 16.5h4</StreamGeometry>
+  <StreamGeometry x:Key="Icon.Pause">M7 4h3v16H7Z M14 4h3v16h-3Z</StreamGeometry>
+  <StreamGeometry x:Key="Icon.Stop">M6 6h12v12H6Z</StreamGeometry>
   <StreamGeometry x:Key="Icon.Monitor">M4 3h16a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Z M8 21h8 M12 17v4</StreamGeometry>
   <StreamGeometry x:Key="Icon.Close">M18 6L6 18 M6 6l12 12</StreamGeometry>
   <StreamGeometry x:Key="Icon.Minimize">M5 12h14</StreamGeometry>

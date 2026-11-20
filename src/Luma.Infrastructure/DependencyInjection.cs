@@ -6,6 +6,8 @@ using Luma.Infrastructure.Downloads;
 using Luma.Infrastructure.Platform;
 using Luma.Infrastructure.Providers;
 using Luma.Infrastructure.Services;
+using Luma.Infrastructure.Platform.Windows.Video;
+using Luma.Infrastructure.Videos;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -47,6 +49,23 @@ public static class DependencyInjection
         services.AddSingleton<IWallpaperApplier>(sp => CreateApplier(sp));
         services.AddSingleton<IWallpaperApplyService, WallpaperApplyService>();
         services.AddSingleton<IRotationService, RotationService>();
+
+        // Live (video) wallpapers: Windows gets the Media Foundation + desktop host implementation, other platforms an honest "unsupported".
+        if (OperatingSystem.IsWindows())
+        {
+            services.AddSingleton<IDesktopVideoHost, WindowsDesktopVideoHost>();
+            services.AddSingleton<IVideoProbe, WindowsVideoProbe>();
+            services.AddSingleton<IVideoPreviewFactory, WindowsVideoPreviewFactory>();
+        }
+        else
+        {
+            services.AddSingleton(sp => new UnsupportedVideoPlatform(sp.GetRequiredService<IPlatformInfo>().Name));
+            services.AddSingleton<IDesktopVideoHost>(sp => sp.GetRequiredService<UnsupportedVideoPlatform>());
+            services.AddSingleton<IVideoProbe>(sp => sp.GetRequiredService<UnsupportedVideoPlatform>());
+            services.AddSingleton<IVideoPreviewFactory>(sp => sp.GetRequiredService<UnsupportedVideoPlatform>());
+        }
+        services.AddSingleton<IVideoLibrary, VideoLibrary>();
+        services.AddSingleton<IVideoWallpaperService, VideoWallpaperService>();
         return services;
     }
 

@@ -140,6 +140,7 @@ public sealed class PageViewLocator : IDataTemplate
             FavoritesViewModel => new FavoritesView(),
             CollectionsViewModel => new CollectionsView(),
             DownloadsViewModel => new DownloadsView(),
+            LiveWallpapersViewModel => new LiveWallpapersView(),
             HistoryViewModel => new HistoryView(),
             FeedbackViewModel => new FeedbackView(),
             SettingsViewModel => new SettingsView(),

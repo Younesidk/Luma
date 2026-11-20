@@ -14,7 +14,7 @@ partial class LumaDbContextModelSnapshot : ModelSnapshot
     // If you encounter a merge conflict in the line below, it means you need to
     // discard one of the migration branches and recreate its migrations on top of
     // the other branch. See https://aka.ms/efcore-docs-migrations-conflicts for more info.
-    public override string LastMigrationId => "20261113190735_InitialCreate";
+    public override string LastMigrationId => "20261116070757_AddVideoWallpapers";
 
     protected override void BuildModel(ModelBuilder modelBuilder)
     {
@@ -126,6 +126,69 @@ partial class LumaDbContextModelSnapshot : ModelSnapshot
                 b.HasIndex("CreatedAt");
 
                 b.ToTable("Favorites");
+            });
+
+        modelBuilder.Entity("Luma.Infrastructure.Database.VideoWallpaperEntity", b =>
+            {
+                b.Property<long>("Id")
+                    .ValueGeneratedOnAdd()
+                    .HasColumnType("INTEGER");
+
+                b.Property<string>("Container")
+                    .IsRequired()
+                    .HasMaxLength(20)
+                    .HasColumnType("TEXT");
+
+                b.Property<long>("DurationMilliseconds")
+                    .HasColumnType("INTEGER");
+
+                b.Property<string>("FilePath")
+                    .IsRequired()
+                    .HasColumnType("TEXT");
+
+                b.Property<long>("FileSizeBytes")
+                    .HasColumnType("INTEGER");
+
+                b.Property<bool>("HasAudio")
+                    .HasColumnType("INTEGER");
+
+                b.Property<int>("Height")
+                    .HasColumnType("INTEGER");
+
+                b.Property<long>("ImportedAt")
+                    .HasColumnType("INTEGER");
+
+                b.Property<string>("OriginalPath")
+                    .HasColumnType("TEXT");
+
+                b.Property<string>("PosterPath")
+                    .HasColumnType("TEXT");
+
+                b.Property<string>("Sha256")
+                    .IsRequired()
+                    .HasMaxLength(64)
+                    .HasColumnType("TEXT");
+
+                b.Property<string>("ThumbnailPath")
+                    .HasColumnType("TEXT");
+
+                b.Property<long>("WallpaperId")
+                    .HasColumnType("INTEGER");
+
+                b.Property<int>("Width")
+                    .HasColumnType("INTEGER");
+
+                b.HasKey("Id");
+
+                b.HasIndex("ImportedAt");
+
+                b.HasIndex("Sha256")
+                    .IsUnique();
+
+                b.HasIndex("WallpaperId")
+                    .IsUnique();
+
+                b.ToTable("VideoWallpapers");
             });
 
         modelBuilder.Entity("Luma.Infrastructure.Database.WallpaperEntity", b =>
@@ -251,6 +314,17 @@ partial class LumaDbContextModelSnapshot : ModelSnapshot
             });
 
         modelBuilder.Entity("Luma.Infrastructure.Database.FavoriteEntity", b =>
+            {
+                b.HasOne("Luma.Infrastructure.Database.WallpaperEntity", "Wallpaper")
+                    .WithMany()
+                    .HasForeignKey("WallpaperId")
+                    .OnDelete(DeleteBehavior.Cascade)
+                    .IsRequired();
+
+                b.Navigation("Wallpaper");
+            });
+
+        modelBuilder.Entity("Luma.Infrastructure.Database.VideoWallpaperEntity", b =>
             {
                 b.HasOne("Luma.Infrastructure.Database.WallpaperEntity", "Wallpaper")
                     .WithMany()

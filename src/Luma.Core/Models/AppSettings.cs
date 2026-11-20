@@ -48,6 +48,13 @@ public sealed class AppSettings
     public long? RotationCollectionId { get; set; }
     public bool RotationRandom { get; set; } = true;
 
+    // Live (video) wallpapers. The selected video itself is state, not a preference: it lives in the state store.
+    /// <summary>"all" for every display, otherwise a display device name (e.g. \\.\DISPLAY2).</summary>
+    public string VideoDisplayTarget { get; set; } = "all";
+    public WallpaperFitMode VideoFitMode { get; set; } = WallpaperFitMode.Fill;
+    public bool VideoPauseOnFullscreen { get; set; } = true;
+    public bool VideoPauseOnBattery { get; set; } = true;
+
     // Performance
     public int ThumbnailCacheMegabytes { get; set; } = 256;
     public int MemoryCacheItems { get; set; } = 80;
@@ -78,5 +85,7 @@ public sealed class AppSettings
         RotationIntervalMinutes = Math.Clamp(RotationIntervalMinutes, 1, 60 * 24 * 14);
         if (string.IsNullOrWhiteSpace(DefaultSource)) DefaultSource = AllSourcesId;
         if (string.IsNullOrWhiteSpace(AccentPreset)) AccentPreset = "violet";
+        if (string.IsNullOrWhiteSpace(VideoDisplayTarget)) VideoDisplayTarget = Logic.VideoLayout.AllDisplays;
+        VideoFitMode = Logic.VideoLayout.Normalize(VideoFitMode);
     }
 }

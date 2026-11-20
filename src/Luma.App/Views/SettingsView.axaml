@@ -137,6 +137,26 @@
         </StackPanel></Border>
       </StackPanel>
 
+      <!-- ================= Live wallpapers ================= -->
+      <StackPanel>
+        <TextBlock Text="Live wallpapers" Classes="group-title" />
+        <Border Classes="card"><StackPanel>
+          <c:SettingRow Heading="This computer" Description="{Binding LiveWallpaperSupportNote}">
+            <TextBlock Text="{Binding LiveWallpaperSummary}" Classes="secondary" />
+          </c:SettingRow>
+          <c:SettingRow Heading="Pause during fullscreen apps and games"
+                        Description="Stops the video on every display while a game or fullscreen app runs, freeing the graphics card. The video always pauses when it's completely hidden.">
+            <ToggleSwitch IsChecked="{Binding VideoPauseOnFullscreen}" IsEnabled="{Binding CanUseLiveWallpapers}" OnContent="" OffContent="" AutomationProperties.Name="Pause during fullscreen apps" />
+          </c:SettingRow>
+          <c:SettingRow Heading="Pause on battery power" Description="Saves battery on laptops. The video resumes when you plug in.">
+            <ToggleSwitch IsChecked="{Binding VideoPauseOnBattery}" IsEnabled="{Binding CanUseLiveWallpapers}" OnContent="" OffContent="" AutomationProperties.Name="Pause on battery power" />
+          </c:SettingRow>
+          <c:SettingRow Heading="Video folder" Description="{Binding VideoStorageText}">
+            <Button Classes="secondary" Content="Open" Command="{Binding OpenVideoFolderCommand}" />
+          </c:SettingRow>
+        </StackPanel></Border>
+      </StackPanel>
+
       <!-- ================= Performance ================= -->
       <StackPanel>
         <TextBlock Text="Performance" Classes="group-title" />

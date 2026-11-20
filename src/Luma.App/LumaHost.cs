@@ -71,6 +71,7 @@ public static class LumaHost
         services.AddSingleton<FavoritesViewModel>();
         services.AddSingleton<CollectionsViewModel>();
         services.AddSingleton<DownloadsViewModel>();
+        services.AddSingleton<LiveWallpapersViewModel>();
         services.AddSingleton<HistoryViewModel>();
         services.AddSingleton<FeedbackViewModel>();
         services.AddSingleton<SettingsViewModel>();

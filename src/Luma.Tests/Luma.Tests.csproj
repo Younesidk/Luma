@@ -21,6 +21,9 @@
   <ItemGroup>
     <Using Include="Xunit" />
   </ItemGroup>
+  <ItemGroup>
+    <None Include="Fixtures\Videos\*.*" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
 </Project>
 
 

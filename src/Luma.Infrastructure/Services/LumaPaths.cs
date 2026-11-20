@@ -27,6 +27,7 @@ public sealed class LumaPaths : ILumaPaths
     public string ThumbnailCacheDirectory => Path.Combine(DataRoot, "Cache", "Thumbnails");
     public string DefaultDownloadDirectory => Path.Combine(DataRoot, "Downloads");
     public string LogsDirectory => Path.Combine(DataRoot, "Logs");
+    public string VideosDirectory => Path.Combine(DataRoot, "Videos");
 
     public void EnsureCreated()
     {

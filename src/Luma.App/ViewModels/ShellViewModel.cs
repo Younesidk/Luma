@@ -51,7 +51,7 @@ public sealed partial class ShellViewModel : ObservableObject
     private PageViewModel? _activePage;
 
     public ShellViewModel(DiscoverViewModel discover, FavoritesViewModel favorites, CollectionsViewModel collections,
-        DownloadsViewModel downloads, HistoryViewModel history, FeedbackViewModel feedback, SettingsViewModel settings, NavigationService navigation,
+        DownloadsViewModel downloads, LiveWallpapersViewModel live, HistoryViewModel history, FeedbackViewModel feedback, SettingsViewModel settings, NavigationService navigation,
         PreviewService preview, DialogService dialogs, ToastService toasts, ISettingsService settingsService, ShellStartup startup,
         UpdateViewModel updates)
     {
@@ -70,6 +70,7 @@ public sealed partial class ShellViewModel : ObservableObject
             [AppPage.Favorites] = favorites,
             [AppPage.Collections] = collections,
             [AppPage.Downloads] = downloads,
+            [AppPage.Live] = live,
             [AppPage.History] = history,
             [AppPage.Feedback] = feedback,
             [AppPage.Settings] = settings
@@ -81,6 +82,7 @@ public sealed partial class ShellViewModel : ObservableObject
             new("favorites", "Favorites", "Icon.Heart", AppPage.Favorites),
             new("collections", "Collections", "Icon.Layers", AppPage.Collections),
             new("downloads", "Downloads", "Icon.Download", AppPage.Downloads),
+            new("live", "Live", "Icon.Film", AppPage.Live),
             new("history", "History", "Icon.History", AppPage.History)
         ];
         SourceItems =
@@ -216,6 +218,7 @@ public sealed partial class ShellViewModel : ObservableObject
             case FavoritesViewModel f: _ = f.ReloadAsync(); break;
             case CollectionsViewModel c: _ = c.ReloadAsync(); break;
             case DownloadsViewModel dl: _ = dl.ReloadAsync(); break;
+            case LiveWallpapersViewModel lv: _ = lv.ReloadAsync(); break;
             case HistoryViewModel h: _ = h.ReloadAsync(); break;
         }
     }
@@ -262,6 +265,7 @@ public sealed partial class ShellViewModel : ObservableObject
         FavoritesViewModel => "favorites",
         CollectionsViewModel => "collections",
         DownloadsViewModel => "downloads",
+        LiveWallpapersViewModel => "live",
         HistoryViewModel => "history",
         FeedbackViewModel => "feedback",
         SettingsViewModel => "settings",

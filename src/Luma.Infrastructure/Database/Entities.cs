@@ -75,3 +75,24 @@ public class AppSettingEntity
     public string Key { get; set; } = string.Empty;
     public string? Value { get; set; }
 }
+
+/// <summary>An imported video wallpaper. The file lives in Luma's managed Videos folder.</summary>
+public class VideoWallpaperEntity
+{
+    public long Id { get; set; }
+    public long WallpaperId { get; set; }
+    public WallpaperEntity Wallpaper { get; set; } = null!;
+    public string FilePath { get; set; } = string.Empty;
+    public string? OriginalPath { get; set; }
+    /// <summary>Content hash of the imported file.</summary>
+    public string Sha256 { get; set; } = string.Empty;
+    public long FileSizeBytes { get; set; }
+    public int Width { get; set; }
+    public int Height { get; set; }
+    public long DurationMilliseconds { get; set; }
+    public string Container { get; set; } = string.Empty;
+    public bool HasAudio { get; set; }
+    public string? ThumbnailPath { get; set; }
+    public string? PosterPath { get; set; }
+    public DateTimeOffset ImportedAt { get; set; }
+}

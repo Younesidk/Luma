@@ -43,6 +43,12 @@ no backend server.
 - **History** of applied wallpapers with one-click re-apply (consecutive duplicates are merged).
 - **Automatic rotation** (while Luma is running) through downloaded wallpapers, favourites or a collection, random or
   sequential, never repeating the current wallpaper while alternatives exist. Missing files are skipped.
+- **Live (video) wallpapers** on Windows 10/11: import MP4, MOV or WebM videos, preview them, and play them muted on a
+  loop *behind the desktop icons* on every display or a chosen one (Fill, Fit or Stretch). One decoder feeds all
+  displays, with hardware decoding where the codec allows. Playback pauses automatically when the desktop is hidden,
+  Windows is locked, the screen is off or the PC sleeps, and optionally during fullscreen apps/games and on battery.
+  The active video comes back when Luma starts, survives Explorer restarts, and its still frame stays on the desktop
+  whenever the video itself isn't playing.
 - **Themes**: dark (default), light and "match system", six accent colours, comfortable/compact gallery density,
   collapsible sidebar. Keyboard shortcuts: `Ctrl+K` Discover search, `Ctrl+F` page search, `Ctrl+,` settings,
   `Ctrl+R` / `F5` refresh, `Esc` closes the preview or dialog.
@@ -57,7 +63,8 @@ no backend server.
 | Data | SQLite + EF Core 11 with migrations |
 | HTTP | `IHttpClientFactory` named clients |
 | DI / config / logging | Microsoft.Extensions.* and Serilog (rolling file sink) |
-| Tests | xUnit (167 tests) |
+| Video wallpapers | Windows Media Foundation (`IMFMediaEngine`, frame-server mode) + Direct3D 11 / DXGI flip swap chains, called through raw COM vtables (no extra packages, nothing to redistribute) |
+| Tests | xUnit (340 tests; 13 use real Media Foundation / Direct3D on Windows, 4 more draw on the real desktop when `LUMA_DESKTOP_TESTS=1`) |
 
 ## Architecture
 
@@ -342,6 +349,88 @@ Implement `IWallpaperApplier` (declare `Capabilities` honestly), then return it 
 `DependencyInjection.cs`. Validate paths with `WallpaperPathValidator` and run external tools through `IProcessRunner`
 so the adapter stays unit-testable with a fake.
 
+## Live (video) wallpapers
+
+A video in an ordinary window is not a wallpaper, so Luma puts its own windows *inside Explorer's desktop*, between the
+icons and the static wallpaper.
+
+**Desktop integration** (`Infrastructure/Platform/Windows/Video`). Explorer only creates the window that draws the
+wallpaper (a `WorkerW`) after Progman receives message `0x052C`, the technique every live-wallpaper app has used since
+Windows 8. Two layouts exist and both are handled:
+
+- Windows 11 24H2 and newer: the `WorkerW` is a *child of Progman*, below `SHELLDLL_DefView` (the icons). Luma's
+  windows become children of Progman inserted directly below `SHELLDLL_DefView`, so the Z order is
+  icons → video → static wallpaper.
+- Windows 10 and Windows 11 before 24H2: the `WorkerW` is a top-level window behind the icon host; Luma's windows
+  become its children.
+
+The output windows return `HTTRANSPARENT` and never activate, so icons, the desktop context menu, the taskbar and all
+normal windows behave as before. They live on a dedicated message-loop thread, never on Avalonia's UI thread, because a
+child window of Explorer's desktop shares input processing with Explorer. A hidden top-level window on that thread
+receives `TaskbarCreated` (Explorer restarted), display changes, power-source / display-power / sleep notifications and
+session lock. If Explorer destroys the desktop, Luma notices its windows being destroyed and rebuilds them as soon as the
+desktop exists again (retrying for up to 45 s). A named mutex lets only one Luma process put video on the desktop.
+
+**Playback.** One Media Foundation Media Engine per video in frame-server mode decodes on a Direct3D 11 device (DXVA
+hardware decoding when the GPU supports the codec, WARP software fallback otherwise). A render thread wakes once per
+compositor frame (`DwmFlush`), asks whether a new frame is ready and only then copies it, scaled and colour converted on
+the GPU, into each display's flip-model swap chain. So "all displays" decodes the video **once**. Audio streams are
+deselected, so they are never decoded. While paused, or with nothing to show, the render thread blocks on an event and
+uses no CPU. Engine errors, a lost graphics device (driver update, resume) and failed presents are reported to
+`VideoWallpaperService`, which retries 3 times (after 1, 5 and 15 s; the count resets after a minute of stable
+playback) and otherwise stops cleanly, leaving the still frame on the desktop.
+
+**Formats.** MP4/M4V and MOV (H.264 always works; HEVC/AV1 need the corresponding Microsoft Store extensions) and WebM
+(VP8/VP9 need *VP9 Video Extensions*, preinstalled on most Windows 10/11 installs). The container is detected from the
+file's header, never from its extension, and every import is opened with the real playback engine before it is
+accepted, so an import that succeeds is a video this PC can play. Error messages say which extension to install.
+
+**Library.** Imports are copied into `%LOCALAPPDATA%\Luma\Videos` (named by content hash, with the extension that matches
+the real container), so the original can be moved or deleted freely and is never modified. Identical content is only
+imported once. Removing a video deletes Luma's copy, thumbnail and still frame, never anything outside the Videos folder.
+Interrupted imports and unreferenced files are cleaned up at start-up. Video entries reference the provider-neutral
+`Wallpaper` identity, so a future, authorised video provider can feed the same library (its `Wallpaper.FileType` is
+`video/...`).
+
+**Interaction with static wallpapers.** Applying a video also sets its still frame as the Windows wallpaper (so the
+desktop shows a frame of it whenever Luma isn't running). Applying any picture turns the video off; scheduled rotation
+does not replace an active video.
+
+### Live wallpaper limitations
+
+- Videos play only **while Luma is running**, like rotation. Closing Luma leaves the still frame on the desktop; the
+  video resumes the next time Luma starts.
+- Windows only. Linux and macOS report "not available" honestly. Windows "N" editions need the Media Feature Pack.
+- One video at a time: different videos on different displays aren't supported. "All displays" fits the same video to
+  each display separately (no stretching across displays).
+- Anamorphic (non-square-pixel) videos are laid out by their stored frame size.
+- Animated GIFs aren't supported as live wallpapers (Media Foundation doesn't decode GIF); convert them to MP4.
+- While a video is active, its decoder keeps roughly 120 MB of extra memory even when paused, so that resuming is
+  instant.
+- Each time a *different* WebM (VP9) video is loaded, Windows' WebM/VP9 components keep about 2 kernel handles. The same
+  code path with H.264 shows no growth, so this is inside Microsoft's decoder; it only matters after hundreds of switches.
+
+### Live wallpaper measurements
+
+Measured on the development machine (Windows 11 build 26300, 12 logical CPUs, one 1920×1080 display, hardware decoding).
+CPU is a share of *all* cores. Numbers are for the playback engine itself, measured in-process:
+
+| Scenario | CPU | GPU 3D / decode | Private memory |
+|---|---:|---:|---:|
+| No video | 0.03 % | 0 % / 0 % | 18 MB |
+| 1080p30 H.264, playing | 0.8 – 1.0 % | 7 % / 8 % | 175 – 184 MB |
+| Paused (any reason) | 0.10 % | 0 % / 0 % | unchanged |
+| 4K30 H.264 on a 1080p display | 1.0 % | 18 % / 23 % | 250 MB |
+
+- **Frame rate**: steady 29.9–30.0 fps for 10 minutes of continuous looping, with memory levelling off around 183 MB
+  and handle/thread counts flat.
+- **Time to the first frame**: 673 ms cold, about 300 ms when switching videos.
+- **Whole app**: Luma's time to its window is unchanged with a live wallpaper configured (median 1.17 s vs 1.26 s
+  without); the video appears about 1.3 s after the window. With the video paused because the desktop was covered, the
+  app's CPU matched a Luma without video (0.1–0.2 %).
+- **Exit**: clean shutdown takes about 0.2 s and leaves no windows on the desktop. After a hard kill, Windows removes
+  the windows with the process.
+
 ## Data storage
 
 Everything lives in the OS application-data folder (override with the `LUMA_DATA_DIR` environment variable):
@@ -352,8 +441,14 @@ Everything lives in the OS application-data folder (override with the `LUMA_DATA
   settings.json      Settings
   Cache\Thumbnails\  Disk thumbnail cache (size-limited, clearable in Settings)
   Downloads\         Default download folder (changeable in Settings)
+  Videos\            Imported live wallpapers (Luma's own copies), with Thumbnails\ and Posters\ (still frames)
   Logs\              Rolling logs (14 days)
 ```
+
+Uninstalling Luma removes the program (`%LOCALAPPDATA%\Luma.Desktop`) but deliberately keeps this data folder,
+including imported videos, so reinstalling restores everything. Delete `%LOCALAPPDATA%\Luma` to remove all data.
+The active live wallpaper is stored in the database's state table rather than `settings.json`, so "Reset settings"
+doesn't turn it off.
 
 The database stores metadata and file paths, never image bytes. Migrations are applied automatically and never drop
 existing data. The API key is stored as plain text in `settings.json` (protected by your user profile permissions);

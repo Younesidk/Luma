@@ -7,6 +7,8 @@ public interface IFileDialogService
 {
     Task<IReadOnlyList<string>> PickImagesAsync();
 
+    Task<IReadOnlyList<string>> PickVideosAsync();
+
     Task<string?> PickFolderAsync(string title);
 }
 
@@ -26,6 +28,18 @@ public sealed class FileDialogService : IFileDialogService
             [
                 new FilePickerFileType("Images") { Patterns = ["*.jpg", "*.jpeg", "*.png", "*.webp", "*.bmp", "*.gif"] }
             ]
+        });
+        return files.Select(f => f.TryGetLocalPath()).Where(p => p is not null).Cast<string>().ToList();
+    }
+
+    public async Task<IReadOnlyList<string>> PickVideosAsync()
+    {
+        if (Owner?.StorageProvider is not { CanOpen: true } storage) return [];
+        var files = await storage.OpenFilePickerAsync(new FilePickerOpenOptions
+        {
+            Title = "Import videos",
+            AllowMultiple = true,
+            FileTypeFilter = [new FilePickerFileType("Videos") { Patterns = Luma.Core.Logic.VideoFileValidator.PickerPatterns }]
         });
         return files.Select(f => f.TryGetLocalPath()).Where(p => p is not null).Cast<string>().ToList();
     }
