@@ -6,10 +6,23 @@
 
 <p align="center"><b>Your desktop. Your atmosphere.</b></p>
 
-Luma is a lightweight, personal desktop wallpaper manager. Discover wallpapers from several online sources, preview
-them in full quality, download them, organise them into collections, keep favourites and apply them straight to your
-desktop. It is a native desktop application built with C#, .NET 11 and Avalonia UI: no Electron, no browser wrapper,
-no backend server.
+Luma is a lightweight, **local live wallpaper engine** and wallpaper manager for your desktop.
+
+- **Live wallpapers** (Windows 10/11): turn your own MP4, MOV or WebM videos into moving wallpapers that play behind your
+  desktop icons. Everything runs on your PC: no account, no cloud, no uploads. Videos pause by themselves when you can't
+  see them, and Luma keeps running quietly in the notification area when you close its window.
+- **Picture wallpapers**: browse still wallpapers from online providers (**Wallhaven** and **Openverse**), preview them
+  in full quality, download them, organise them into collections, keep favourites, rotate them automatically and apply
+  them straight to your desktop. The providers supply pictures only; live wallpapers always come from your own videos.
+
+It is a native desktop application built with C#, .NET 11 and Avalonia UI: no Electron, no browser wrapper, no backend
+server.
+
+![Live wallpapers](docs/screenshots/live.png)
+
+| Live wallpaper preview | Live wallpaper settings |
+|---|---|
+| ![Live wallpaper preview](docs/screenshots/live-preview.png) | ![Live wallpaper settings](docs/screenshots/settings-live.png) |
 
 ![Discover](docs/screenshots/discover.png)
 
