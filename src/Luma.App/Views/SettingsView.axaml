@@ -1,4 +1,4 @@
-<UserControl xmlns="https://github.com/avaloniaui"
+﻿<UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:c="using:Luma.App.Controls"
              xmlns:vm="using:Luma.App.ViewModels"
@@ -147,6 +147,10 @@
           <c:SettingRow Heading="Keep running in the background when closed"
                         Description="Closing the window keeps the live wallpaper and rotation going from the icon in the taskbar's notification area. Quit Luma from that icon.">
             <ToggleSwitch IsChecked="{Binding CloseToTray}" OnContent="" OffContent="" AutomationProperties.Name="Keep running in the background when closed" />
+          </c:SettingRow>
+          <c:SettingRow Heading="Start with Windows" IsVisible="{Binding CanLaunchAtLogin}"
+                        Description="Luma starts quietly in the notification area when you sign in and brings back your live wallpaper. You can also turn this off in Task Manager's Startup apps.">
+            <ToggleSwitch IsChecked="{Binding StartWithWindows}" OnContent="" OffContent="" AutomationProperties.Name="Start with Windows" />
           </c:SettingRow>
           <c:SettingRow Heading="Pause during fullscreen apps and games"
                         Description="Stops the video on every display while a game or fullscreen app runs, freeing the graphics card. The video always pauses when it's completely hidden.">

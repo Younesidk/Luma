@@ -66,6 +66,9 @@ server.
 - **Runs in the background**: closing the window keeps Luma in the taskbar's notification area, where the live
   wallpaper and rotation keep going. Click the icon to reopen Luma; its menu pauses the video or quits. Launching Luma
   again brings the running copy back instead of starting a second one. (Settings → Live wallpapers, on by default.)
+- **Start with Windows** (optional, off by default): Luma starts quietly in the notification area when you sign in and
+  brings back your live wallpaper, without opening its window. Turn it on in Settings → Live wallpapers; it also
+  appears in Task Manager's Startup apps.
 - **Themes**: dark (default), light and "match system", six accent colours, comfortable/compact gallery density,
   collapsible sidebar. Keyboard shortcuts: `Ctrl+K` Discover search, `Ctrl+F` page search, `Ctrl+,` settings,
   `Ctrl+R` / `F5` refresh, `Esc` closes the preview or dialog.
@@ -425,7 +428,7 @@ does not replace an active video.
 
 - Videos play only **while Luma is running**, like rotation. Closing the window keeps Luma running in the notification
   area; quitting it (tray icon → Quit Luma) leaves the still frame on the desktop, and the video resumes the next time
-  Luma starts.
+  Luma starts. Turn on "Start with Windows" to have that happen automatically when you sign in.
 - Windows only. Linux and macOS report "not available" honestly. Windows "N" editions need the Media Feature Pack.
 - One video at a time: different videos on different displays aren't supported. "All displays" fits the same video to
   each display separately (no stretching across displays).

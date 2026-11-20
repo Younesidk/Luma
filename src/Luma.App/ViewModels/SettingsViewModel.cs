@@ -407,6 +407,28 @@ public sealed partial class SettingsViewModel : PageViewModel
         set => Set(s => s.CloseToTray, (s, v) => s.CloseToTray = v, value);
     }
 
+    public bool CanLaunchAtLogin => LaunchAtLogin.IsSupported;
+
+    /// <summary>Backed by the Windows Run entry itself, so it reflects changes made in Task Manager or elsewhere.</summary>
+    public bool StartWithWindows
+    {
+        get => LaunchAtLogin.IsEnabled;
+        set
+        {
+            if (LaunchAtLogin.IsEnabled == value) return;
+            try
+            {
+                LaunchAtLogin.SetEnabled(value);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Changing start with Windows failed");
+                _toasts.Show("Luma couldn't change its start-up setting in Windows.", ToastKind.Error);
+            }
+            OnPropertyChanged();
+        }
+    }
+
     public bool VideoShrinkOnImport
     {
         get => S.VideoShrinkOnImport;
@@ -513,6 +535,7 @@ public sealed partial class SettingsViewModel : PageViewModel
 
     public override async Task OnActivatedAsync()
     {
+        OnPropertyChanged(nameof(StartWithWindows));
         RebuildSourceOptions();
         RefreshRotationText();
         UpdateMemory();

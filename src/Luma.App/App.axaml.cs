@@ -48,23 +48,47 @@ public partial class App : Application
             desktop.ShutdownMode = ShutdownMode.OnExplicitShutdown;
             desktop.Exit += (_, _) => Shutdown();
 
-            var window = CreateMainWindow();
-            window.Opened += async (_, _) =>
-            {
-                try
-                {
-                    await shell.StartAsync();
-                }
-                catch (Exception ex)
-                {
-                    _services.GetRequiredService<ILogger<App>>().LogError(ex, "Start-up failed");
-                }
-                StartUpdates(desktop);
-            };
-            desktop.MainWindow = window;
-
             _tray = new TrayIconController(this, _services, ShowMainWindow, Quit);
             Program.Instance?.Listen(() => Dispatcher.UIThread.Post(ShowMainWindow));
+            LaunchAtLogin.RefreshIfEnabled();
+
+            // Started with Windows: stay in the notification area and just bring back the live wallpaper and rotation.
+            // Without a tray icon there would be no way to reach Luma, so the window opens as usual then.
+            var background = desktop.Args?.Contains(LaunchAtLogin.BackgroundArgument, StringComparer.OrdinalIgnoreCase) == true
+                             && _tray.IsVisible;
+            if (background)
+            {
+                Log.Information("Started in the background (launch at sign-in)");
+                Dispatcher.UIThread.Post(async () =>
+                {
+                    try
+                    {
+                        await shell.Startup.BeginAsync();
+                    }
+                    catch (Exception ex)
+                    {
+                        _services.GetRequiredService<ILogger<App>>().LogError(ex, "Background start-up failed");
+                    }
+                    StartUpdates(desktop);
+                });
+            }
+            else
+            {
+                var window = CreateMainWindow();
+                window.Opened += async (_, _) =>
+                {
+                    try
+                    {
+                        await shell.StartAsync();
+                    }
+                    catch (Exception ex)
+                    {
+                        _services.GetRequiredService<ILogger<App>>().LogError(ex, "Start-up failed");
+                    }
+                    StartUpdates(desktop);
+                };
+                desktop.MainWindow = window;
+            }
         }
 
         base.OnFrameworkInitializationCompleted();

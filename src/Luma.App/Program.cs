@@ -15,9 +15,10 @@ public static class Program
     {
         // Must run first: Velopack handles its install/update/uninstall hooks here (and exits the process for them),
         // and applies an update that was downloaded in a previous session. In a plain development build it does nothing.
-        VelopackApp.Build()
-            .SetArgs(args)
-            .Run();
+        var velopack = VelopackApp.Build().SetArgs(args);
+        // Uninstalling must not leave a Run entry pointing at a deleted exe.
+        if (OperatingSystem.IsWindows()) velopack = velopack.OnBeforeUninstallFastCallback(_ => LaunchAtLogin.RemoveQuietly());
+        velopack.Run();
 
         // Luma lives on in the notification area after its window closes; a second launch just shows that window.
         using var instance = SingleInstance.TryAcquire();
