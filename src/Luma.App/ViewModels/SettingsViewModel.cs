@@ -401,6 +401,18 @@ public sealed partial class SettingsViewModel : PageViewModel
         set => Set(s => s.VideoPauseOnFullscreen, (s, v) => s.VideoPauseOnFullscreen = v, value);
     }
 
+    public bool CloseToTray
+    {
+        get => S.CloseToTray;
+        set => Set(s => s.CloseToTray, (s, v) => s.CloseToTray = v, value);
+    }
+
+    public bool VideoShrinkOnImport
+    {
+        get => S.VideoShrinkOnImport;
+        set => Set(s => s.VideoShrinkOnImport, (s, v) => s.VideoShrinkOnImport = v, value);
+    }
+
     public bool VideoPauseOnBattery
     {
         get => S.VideoPauseOnBattery;

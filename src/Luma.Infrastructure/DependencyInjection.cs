@@ -55,6 +55,7 @@ public static class DependencyInjection
         {
             services.AddSingleton<IDesktopVideoHost, WindowsDesktopVideoHost>();
             services.AddSingleton<IVideoProbe, WindowsVideoProbe>();
+            services.AddSingleton<IVideoOptimizer, WindowsVideoOptimizer>();
             services.AddSingleton<IVideoPreviewFactory, WindowsVideoPreviewFactory>();
         }
         else

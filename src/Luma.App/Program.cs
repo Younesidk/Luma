@@ -2,6 +2,7 @@
 using Avalonia;
 using Avalonia.Win32;
 using Avalonia.X11;
+using Luma.App.Services;
 using Luma.Infrastructure.Services;
 using Velopack;
 
@@ -18,8 +19,16 @@ public static class Program
             .SetArgs(args)
             .Run();
 
+        // Luma lives on in the notification area after its window closes; a second launch just shows that window.
+        using var instance = SingleInstance.TryAcquire();
+        if (instance is null) return;
+        Instance = instance;
+
         BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
     }
+
+    /// <summary>The single-instance guard of this process (the app listens on it for "show the window" requests).</summary>
+    internal static SingleInstance? Instance { get; private set; }
 
     public static AppBuilder BuildAvaloniaApp()
     {

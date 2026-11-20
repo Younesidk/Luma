@@ -12,6 +12,12 @@ namespace Luma.Infrastructure.Platform.Windows.Video;
 /// (<see cref="DesktopWindowThread"/>) placed behind the desktop icons. Rebuilds its windows when Explorer restarts,
 /// after resume and when displays change, and reports power/lock/fullscreen conditions. A named mutex guarantees that
 /// only one Luma process puts video windows on the desktop.
+/// <para>
+/// A 4K decoder holds a few hundred megabytes of frame buffers (in system memory on integrated GPUs). After the video
+/// has been paused for <see cref="ReleaseAfterPause"/> (desktop covered, fullscreen app, locked, battery, paused by the
+/// user) the decoder is released and the desktop windows paint a copy of the paused frame instead; resuming loads it
+/// again at the same position.
+/// </para>
 /// </summary>
 [SupportedOSPlatform("windows")]
 public sealed class WindowsDesktopVideoHost : IDesktopVideoHost
@@ -19,6 +25,7 @@ public sealed class WindowsDesktopVideoHost : IDesktopVideoHost
     private static readonly TimeSpan LoadTimeout = TimeSpan.FromSeconds(20);
     private static readonly TimeSpan FirstFrameTimeout = TimeSpan.FromSeconds(10);
     private static readonly TimeSpan ShellWaitLimit = TimeSpan.FromSeconds(45);
+    internal static TimeSpan ReleaseAfterPause { get; set; } = TimeSpan.FromSeconds(20);
     private const string InstanceMutexName = @"Local\Luma.LiveWallpaper.Host";
 
     private readonly ILogger<WindowsDesktopVideoHost> _logger;
@@ -35,6 +42,11 @@ public sealed class WindowsDesktopVideoHost : IDesktopVideoHost
     private CancellationTokenSource? _rebuildCts;
     private VideoHostCapabilities? _capabilities;
     private bool _disposed;
+    private readonly object _releaseLock = new();
+    private CancellationTokenSource? _releaseCts;
+    private bool _dormant;          // decoder released while paused; the windows show a still frame
+    private string? _resumePath;
+    private double _resumePosition;
 
     public WindowsDesktopVideoHost(ILogger<WindowsDesktopVideoHost> logger)
     {
@@ -55,6 +67,9 @@ public sealed class WindowsDesktopVideoHost : IDesktopVideoHost
     /// <summary>Frames presented by the current renderer (diagnostics and integration tests).</summary>
     public long FramesPresented => _renderer?.FramesPresented ?? 0;
 
+    /// <summary>True while the decoder is released because playback has been paused for a while (diagnostics and tests).</summary>
+    public bool IsDecoderReleased => _dormant;
+
     public IReadOnlyList<DisplayInfo> GetDisplays() => DesktopShell.GetDisplays();
 
     public async Task ShowAsync(VideoPresentation presentation, bool startPaused, CancellationToken cancellationToken = default)
@@ -74,13 +89,15 @@ public sealed class WindowsDesktopVideoHost : IDesktopVideoHost
             if (_renderer is null || !string.Equals(_loadedPath, presentation.FilePath, StringComparison.OrdinalIgnoreCase))
             {
                 await ReleaseRendererAsync();
+                var startAt = _dormant && string.Equals(_resumePath, presentation.FilePath, StringComparison.OrdinalIgnoreCase) ? _resumePosition : 0;
+                _dormant = false;
                 var renderer = new VideoRenderer(_logger, "Luma video wallpaper");
                 renderer.Failed += OnRendererFailed;
                 _renderer = renderer;
                 _loadedPath = presentation.FilePath;
                 try
                 {
-                    await renderer.LoadAsync(presentation.FilePath).WaitAsync(LoadTimeout, cancellationToken);
+                    await renderer.LoadAsync(presentation.FilePath, startAt).WaitAsync(LoadTimeout, cancellationToken);
                 }
                 catch (TimeoutException)
                 {
@@ -93,6 +110,8 @@ public sealed class WindowsDesktopVideoHost : IDesktopVideoHost
             await AttachOutputsAsync(windows, presentation, cancellationToken);
             await windows.InvokeAsync(() => windows.SetOcclusionPolling(true));
             UpdateOcclusion();
+            if (_paused) ScheduleRelease();
+            else CancelRelease();
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
@@ -111,7 +130,15 @@ public sealed class WindowsDesktopVideoHost : IDesktopVideoHost
     public void SetPaused(bool paused)
     {
         _paused = paused;
-        _renderer?.SetPlaying(!paused);
+        if (paused)
+        {
+            _renderer?.SetPlaying(false);
+            ScheduleRelease();
+            return;
+        }
+        CancelRelease();
+        if (_dormant) _ = ResumeAsync();
+        else _renderer?.SetPlaying(true);
     }
 
     public async Task HideAsync()
@@ -163,6 +190,9 @@ public sealed class WindowsDesktopVideoHost : IDesktopVideoHost
     private async Task HideCoreAsync()
     {
         CancelRebuild();
+        CancelRelease();
+        _dormant = false;
+        _resumePath = null;
         _presentation = null;
         _lastOcclusionSample = null;
         await ReleaseRendererAsync();
@@ -251,6 +281,118 @@ public sealed class WindowsDesktopVideoHost : IDesktopVideoHost
             // Not owned (never acquired on this thread); closing the handle below is enough.
         }
         mutex.Dispose();
+    }
+
+    // ----- releasing the decoder while paused -----
+
+    private void ScheduleRelease()
+    {
+        if (ReleaseAfterPause <= TimeSpan.Zero) return;
+        CancellationTokenSource cts;
+        lock (_releaseLock)
+        {
+            if (_releaseCts is not null) return; // already counting down
+            cts = _releaseCts = new CancellationTokenSource();
+        }
+        _ = ReleaseWhenStillPausedAsync(cts);
+    }
+
+    private void CancelRelease()
+    {
+        lock (_releaseLock)
+        {
+            _releaseCts?.Cancel();
+            _releaseCts = null; // disposed by its own countdown
+        }
+    }
+
+    private async Task ReleaseWhenStillPausedAsync(CancellationTokenSource cts)
+    {
+        try
+        {
+            await Task.Delay(ReleaseAfterPause, cts.Token);
+            await _gate.WaitAsync(cts.Token);
+            try
+            {
+                if (!_paused || _dormant || _renderer is not { } renderer || _presentation is not { } presentation || _windows is not { } windows) return;
+                var (stills, position) = await renderer.CaptureStillsAsync();
+                // Without a picture the desktop would go blank; keep the decoder rather than show nothing.
+                if (stills.Count == 0 || cts.IsCancellationRequested) return;
+
+                _resumePath = presentation.FilePath;
+                _resumePosition = position;
+                await ReleaseRendererAsync(); // joins the render thread: the swap chains are gone afterwards
+                await windows.InvokeAsync(() => windows.SetStills(stills));
+                _dormant = true;
+                _logger.LogInformation("Live wallpaper paused for {Seconds:N0}s; released the video decoder (resumes at {Position:N1}s)",
+                    ReleaseAfterPause.TotalSeconds, position);
+            }
+            finally
+            {
+                _gate.Release();
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // resumed (or hidden) before the delay ran out
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Releasing the paused video decoder failed");
+        }
+        finally
+        {
+            lock (_releaseLock)
+            {
+                if (ReferenceEquals(_releaseCts, cts)) _releaseCts = null;
+            }
+            cts.Dispose();
+        }
+    }
+
+    /// <summary>Loads the decoder again where it stopped. The still frame stays on screen until the first new frame is drawn.</summary>
+    private async Task ResumeAsync()
+    {
+        await _gate.WaitAsync();
+        try
+        {
+            if (!_dormant || _paused || _disposed || _presentation is not { } presentation || _windows is not { } windows) return;
+            _dormant = false;
+
+            var renderer = new VideoRenderer(_logger, "Luma video wallpaper");
+            renderer.Failed += OnRendererFailed;
+            _renderer = renderer;
+            _loadedPath = presentation.FilePath;
+            await renderer.LoadAsync(presentation.FilePath, _resumePosition).WaitAsync(LoadTimeout);
+
+            if (await windows.InvokeAsync(windows.OutputsAreHealthy))
+            {
+                var outputs = await windows.InvokeAsync(() => windows.Outputs.ToList());
+                var fit = VideoLayout.Normalize(presentation.Fit);
+                await renderer.SetTargetsAsync(outputs.Select(o => new RenderTarget(o.Window, o.Width, o.Height, fit)).ToList());
+                renderer.SetPlaying(!_paused);
+                await renderer.WaitForFrameAsync().WaitAsync(FirstFrameTimeout);
+                await windows.InvokeAsync(windows.ClearStills);
+            }
+            else
+            {
+                // Explorer recreated the desktop while the decoder was released: build fresh windows.
+                await AttachOutputsAsync(windows, presentation, CancellationToken.None);
+            }
+            _logger.LogInformation("Live wallpaper resumed; video decoder loaded again");
+            if (_paused) ScheduleRelease();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Resuming the live wallpaper failed");
+            await ReleaseRendererAsync();
+            var message = ex is VideoHostException vhe ? vhe.Message : "The live wallpaper couldn't be resumed.";
+            Failed?.Invoke(this, new VideoHostFailure(message, Recoverable: true));
+        }
+        finally
+        {
+            _gate.Release();
+        }
     }
 
     // ----- recovery -----

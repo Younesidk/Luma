@@ -28,6 +28,22 @@ public interface IVideoLibrary
     Task CleanupAsync(CancellationToken cancellationToken = default);
 }
 
+/// <summary>
+/// Re-encodes videos that are much larger than the screens. A wallpaper is never shown bigger than the display, but the
+/// decoder keeps full-size frames in memory: a 4K video on a 1080p screen costs about four times the memory of a 1080p one.
+/// </summary>
+public interface IVideoOptimizer
+{
+    bool IsSupported { get; }
+
+    /// <summary>
+    /// Writes the video stream of <paramref name="inputPath"/> to <paramref name="outputPath"/> (H.264 in MP4, no audio) scaled
+    /// to <paramref name="width"/>×<paramref name="height"/>. The input is only read. Throws <see cref="Exceptions.VideoNotPlayableException"/>.
+    /// </summary>
+    Task ShrinkAsync(string inputPath, string outputPath, int width, int height, TimeSpan duration, IProgress<double>? progress = null,
+        CancellationToken cancellationToken = default);
+}
+
 /// <summary>Opens a video with the real playback engine to read its facts and grab still frames.</summary>
 public interface IVideoProbe
 {

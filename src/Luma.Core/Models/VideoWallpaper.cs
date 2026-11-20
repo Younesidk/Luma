@@ -100,4 +100,5 @@ public sealed record VideoWallpaperStatus
     public bool IsActive => State is not (VideoPlaybackState.Inactive or VideoPlaybackState.Failed);
 }
 
-public sealed record VideoImportResult(VideoWallpaper Video, bool AlreadyExisted);
+/// <param name="ResizedFrom">The original size when the imported copy was shrunk to fit the screens, otherwise null.</param>
+public sealed record VideoImportResult(VideoWallpaper Video, bool AlreadyExisted, WallpaperResolution? ResizedFrom = null);

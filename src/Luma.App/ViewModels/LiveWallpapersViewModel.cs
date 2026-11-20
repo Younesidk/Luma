@@ -236,21 +236,30 @@ public sealed partial class LiveWallpapersViewModel : PageViewModel
 
         VideoWallpaper? last = null;
         var imported = 0;
+        string? resizedNote = null;
         var failures = new List<string>();
         try
         {
             for (var i = 0; i < paths.Count; i++)
             {
                 var path = paths[i];
-                ImportStatus = paths.Count == 1 ? $"Importing {Path.GetFileName(path)}…" : $"Importing {i + 1} of {paths.Count}: {Path.GetFileName(path)}…";
+                var counter = paths.Count == 1 ? string.Empty : $" {i + 1} of {paths.Count}:";
+                ImportStatus = $"Importing{counter} {Path.GetFileName(path)}…";
                 ImportProgress = 0;
                 try
                 {
-                    var progress = new Progress<double>(p => ImportProgress = p * 100);
+                    var progress = new Progress<double>(p =>
+                    {
+                        ImportProgress = p * 100;
+                        // The library reports above 90 % only while it re-encodes an oversized video.
+                        if (p > 0.9 && p < 1) ImportStatus = $"Resizing{counter} {Path.GetFileName(path)} for your screen…";
+                    });
                     var result = await _library.ImportAsync(path, progress);
                     last = result.Video;
                     if (result.AlreadyExisted) _toasts.Show($"\"{result.Video.Title}\" is already in your live wallpapers.", ToastKind.Info);
                     else imported++;
+                    if (result.ResizedFrom is { } from)
+                        resizedNote = $"resized from {from.Width}×{from.Height} to {result.Video.Info.Width}×{result.Video.Info.Height} to fit your screen";
                 }
                 catch (VideoNotPlayableException ex)
                 {
@@ -269,7 +278,12 @@ public sealed partial class LiveWallpapersViewModel : PageViewModel
         }
 
         await ReloadAsync();
-        if (imported > 0) _toasts.Show(imported == 1 ? "Video imported" : $"Imported {imported} videos", ToastKind.Success);
+        if (imported > 0)
+        {
+            var text = imported == 1 ? "Video imported" : $"Imported {imported} videos";
+            if (resizedNote is not null) text += imported == 1 ? $" and {resizedNote}" : " (oversized ones were resized to fit your screen)";
+            _toasts.Show(text, ToastKind.Success);
+        }
         if (failures.Count > 0) _toasts.Show(failures[0] + (failures.Count > 1 ? $" (+{failures.Count - 1} more)" : string.Empty), ToastKind.Error);
 
         // One new video: show it straight away so the user can try it before applying.

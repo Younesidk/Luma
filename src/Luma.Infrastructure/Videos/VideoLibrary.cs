@@ -26,13 +26,21 @@ public sealed class VideoLibrary : IVideoLibrary
 
     private readonly IDbContextFactory<LumaDbContext> _factory;
     private readonly IVideoProbe _probe;
+    private readonly IVideoOptimizer? _optimizer;
+    private readonly ISettingsService? _settings;
+    private readonly IDesktopVideoHost? _host;
     private readonly ILogger<VideoLibrary> _logger;
     private readonly SemaphoreSlim _importLock = new(1, 1);
 
-    public VideoLibrary(IDbContextFactory<LumaDbContext> factory, IVideoProbe probe, ILumaPaths paths, ILogger<VideoLibrary> logger)
+    /// <param name="optimizer">With <paramref name="settings"/> and <paramref name="host"/>: shrinks imports much larger than the displays.</param>
+    public VideoLibrary(IDbContextFactory<LumaDbContext> factory, IVideoProbe probe, ILumaPaths paths, ILogger<VideoLibrary> logger,
+        IVideoOptimizer? optimizer = null, ISettingsService? settings = null, IDesktopVideoHost? host = null)
     {
         _factory = factory;
         _probe = probe;
+        _optimizer = optimizer;
+        _settings = settings;
+        _host = host;
         _logger = logger;
         Directory = paths.VideosDirectory;
     }
@@ -97,6 +105,23 @@ public sealed class VideoLibrary : IVideoLibrary
                 throw new VideoNotPlayableException($"\"{name}\" can't be played: {ex.Message}", ex);
             }
 
+            WallpaperResolution? resizedFrom = null;
+            if (ShrinkTarget(probe) is { } target)
+            {
+                var shrunk = await ShrinkAsync(finalPath, baseName, probe, target, progress, cancellationToken);
+                if (shrunk is not null)
+                {
+                    resizedFrom = new WallpaperResolution(probe.Width, probe.Height);
+                    createdFiles.Remove(finalPath);
+                    if (!string.Equals(shrunk.Value.Path, finalPath, StringComparison.OrdinalIgnoreCase)) TryDelete(finalPath);
+                    finalPath = shrunk.Value.Path;
+                    createdFiles.Add(finalPath);
+                    probe = shrunk.Value.Probe;
+                    container = VideoContainer.Mp4;
+                    size = new FileInfo(finalPath).Length;
+                }
+            }
+
             var thumbnail = Path.Combine(Directory, ThumbnailFolder, baseName + ".png");
             var poster = Path.Combine(Directory, PosterFolder, baseName + ".png");
             System.IO.Directory.CreateDirectory(Path.GetDirectoryName(thumbnail)!);
@@ -113,7 +138,7 @@ public sealed class VideoLibrary : IVideoLibrary
             createdFiles.Clear(); // committed: the files now belong to the entry
             progress?.Report(1);
             Changed?.Invoke(this, EventArgs.Empty);
-            return new VideoImportResult(stored, AlreadyExisted: false);
+            return new VideoImportResult(stored, AlreadyExisted: false, resizedFrom);
         }
         catch (IOException ex) when ((ex.HResult & 0xFFFF) is DiskFull or HandleDiskFull)
         {
@@ -130,6 +155,52 @@ public sealed class VideoLibrary : IVideoLibrary
             if (stagedFile is not null) TryDelete(stagedFile);
             foreach (var file in createdFiles) TryDelete(file);
             _importLock.Release();
+        }
+    }
+
+    /// <summary>The size to shrink to, or null when the setting is off, shrinking isn't available or the video is small enough.</summary>
+    private (int Width, int Height)? ShrinkTarget(VideoProbeResult probe)
+    {
+        if (_optimizer is not { IsSupported: true } || _settings?.Current.VideoShrinkOnImport != true || _host is null) return null;
+        try
+        {
+            return VideoShrinkPolicy.TargetSize(probe.Width, probe.Height, _host.GetDisplays());
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "The displays couldn't be read; the video is imported at its own size");
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// Re-encodes the managed copy at screen size. Returns the new file and its probe, or null to keep the original copy
+    /// (the import never fails because of this optional step).
+    /// </summary>
+    private async Task<(string Path, VideoProbeResult Probe)?> ShrinkAsync(string copy, string baseName, VideoProbeResult original,
+        (int Width, int Height) target, IProgress<double>? progress, CancellationToken ct)
+    {
+        var staging = Path.Combine(Directory, ImportingFolder, Guid.NewGuid().ToString("N") + ".mp4");
+        System.IO.Directory.CreateDirectory(Path.GetDirectoryName(staging)!);
+        try
+        {
+            var step = progress is null ? null : new Progress<double>(p => progress.Report(0.9 + 0.09 * p));
+            await _optimizer!.ShrinkAsync(copy, staging, target.Width, target.Height, original.Duration, step, ct);
+            var probe = await _probe.ProbeAsync(staging, ct);
+            var path = Path.Combine(Directory, baseName + ".mp4");
+            File.Move(staging, path, overwrite: true); // replaces the copy when it was already an .mp4
+            _logger.LogInformation("Shrunk {Name} from {OldWidth}x{OldHeight} to {Width}x{Height} for the displays",
+                baseName, original.Width, original.Height, probe.Width, probe.Height);
+            return (path, probe);
+        }
+        catch (Exception ex) when (ex is VideoNotPlayableException or IOException or UnauthorizedAccessException)
+        {
+            _logger.LogWarning(ex, "Shrinking {Name} failed; keeping the original size", baseName);
+            return null;
+        }
+        finally
+        {
+            TryDelete(staging);
         }
     }
 

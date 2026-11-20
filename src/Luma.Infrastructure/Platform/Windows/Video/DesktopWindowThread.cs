@@ -42,6 +42,7 @@ internal sealed unsafe class DesktopWindowThread : IDisposable
     private readonly ConcurrentQueue<Action> _queue = new();
     private readonly TaskCompletionSource _ready = new(TaskCreationOptions.RunContinuationsAsynchronously);
     private readonly List<DesktopOutput> _outputs = [];
+    private readonly Dictionary<nint, VideoStill> _stills = [];
     private DesktopTarget? _target;
     private nint _monitor;
     private uint _taskbarCreated;
@@ -168,8 +169,52 @@ internal sealed unsafe class DesktopWindowThread : IDisposable
     public bool OutputsAreHealthy() =>
         _outputs.Count > 0 && _target is not null && User32.IsWindow(_target.Parent) && _outputs.All(o => User32.IsWindow(o.Window));
 
+    /// <summary>
+    /// Makes the output windows paint these pictures themselves (GDI) while no swap chain is attached, so the desktop keeps
+    /// showing the paused frame after the decoder was released. Must run on this thread, after the swap chains are gone.
+    /// </summary>
+    public void SetStills(IReadOnlyList<VideoStill> stills)
+    {
+        _stills.Clear();
+        foreach (var still in stills)
+        {
+            if (!_outputs.Any(o => o.Window == still.Window)) continue;
+            _stills[still.Window] = still;
+            User32.InvalidateRect(still.Window, 0, false);
+        }
+    }
+
+    /// <summary>Drops the pictures (a swap chain draws the windows again). Must run on this thread.</summary>
+    public void ClearStills() => _stills.Clear();
+
+    public bool HasStills => _stills.Count > 0;
+
+    private void PaintOutput(nint hwnd)
+    {
+        User32.PAINTSTRUCT paint;
+        var hdc = User32.BeginPaint(hwnd, &paint);
+        try
+        {
+            if (hdc == 0 || !_stills.TryGetValue(hwnd, out var still) || !User32.GetClientRect(hwnd, out var client)) return;
+            var header = new User32.BITMAPINFOHEADER
+            {
+                Size = (uint)sizeof(User32.BITMAPINFOHEADER), Width = still.Width, Height = -still.Height /* top-down */, Planes = 1, BitCount = 32
+            };
+            User32.SetStretchBltMode(hdc, User32.HALFTONE);
+            fixed (byte* bits = still.Pixels)
+            {
+                User32.StretchDIBits(hdc, 0, 0, client.Width, client.Height, 0, 0, still.Width, still.Height, bits, &header, 0 /* DIB_RGB_COLORS */, User32.SRCCOPY);
+            }
+        }
+        finally
+        {
+            User32.EndPaint(hwnd, &paint);
+        }
+    }
+
     public void DestroyOutputs()
     {
+        _stills.Clear();
         _destroyingOutputs = true;
         try
         {
@@ -267,7 +312,9 @@ internal sealed unsafe class DesktopWindowThread : IDisposable
             case User32.WM_ERASEBKGND:
                 return 1;
             case User32.WM_PAINT:
-                User32.ValidateRect(hwnd, 0); // the swap chain draws the content
+                // Normally the swap chain draws the content; while the decoder is released the window paints the paused frame.
+                if (_current is { HasStills: true } owner) owner.PaintOutput(hwnd);
+                else User32.ValidateRect(hwnd, 0);
                 return 0;
             case User32.WM_DESTROY:
                 _current?.OnOutputDestroyed(hwnd);

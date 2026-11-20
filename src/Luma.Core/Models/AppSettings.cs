@@ -24,6 +24,10 @@ public sealed class AppSettings
 
     public const int CurrentVersion = 1;
 
+    // Behaviour
+    /// <summary>Closing the window leaves Luma running in the notification area (live wallpaper, rotation); quit from its icon.</summary>
+    public bool CloseToTray { get; set; } = true;
+
     // Downloads
     /// <summary>Custom download directory. Null/empty means the default location inside Luma's data directory.</summary>
     public string? DownloadDirectory { get; set; }
@@ -54,6 +58,8 @@ public sealed class AppSettings
     public WallpaperFitMode VideoFitMode { get; set; } = WallpaperFitMode.Fill;
     public bool VideoPauseOnFullscreen { get; set; } = true;
     public bool VideoPauseOnBattery { get; set; } = true;
+    /// <summary>Imported videos much larger than the largest display are re-encoded at screen size (the original file is untouched).</summary>
+    public bool VideoShrinkOnImport { get; set; } = true;
 
     // Performance
     public int ThumbnailCacheMegabytes { get; set; } = 256;

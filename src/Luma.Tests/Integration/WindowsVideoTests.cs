@@ -27,6 +27,16 @@ public sealed class WindowsMediaFactAttribute : FactAttribute
 /// Puts real windows on the real desktop. Opt-in (set LUMA_DESKTOP_TESTS=1) because it changes what is visible on the
 /// machine running the tests, and CI agents may have no interactive Explorer desktop.
 /// </summary>
+public sealed class ManualImportFactAttribute : FactAttribute
+{
+    public ManualImportFactAttribute()
+    {
+        if (!OperatingSystem.IsWindows()) Skip = "Needs Windows.";
+        else if (Environment.GetEnvironmentVariable("LUMA_IMPORT_SOURCE") is not { Length: > 0 } path || !File.Exists(path))
+            Skip = "Set LUMA_IMPORT_SOURCE to a real video larger than your screen.";
+    }
+}
+
 public sealed class WindowsDesktopFactAttribute : FactAttribute
 {
     public WindowsDesktopFactAttribute()
@@ -130,6 +140,107 @@ public class WindowsVideoTests
     }
 
     [WindowsMediaFact]
+    public async Task Renderer_captures_what_each_output_shows_and_can_start_at_a_saved_position()
+    {
+        using var window = HiddenWindow.Create(320, 180);
+        double position;
+        using (var renderer = new VideoRenderer(NullLogger.Instance, "test renderer"))
+        {
+            await renderer.LoadAsync(Fixture("h264.mp4")).WaitAsync(TimeSpan.FromSeconds(15));
+            await renderer.SetTargetsAsync([new RenderTarget(window.Handle, 320, 180, WallpaperFitMode.Fill)]);
+            renderer.SetPlaying(true);
+            await renderer.WaitForFrameAsync().WaitAsync(TimeSpan.FromSeconds(10));
+            await Task.Delay(400);
+            renderer.SetPlaying(false);
+
+            var (stills, at) = await renderer.CaptureStillsAsync();
+            var still = Assert.Single(stills);
+            Assert.Equal((window.Handle, 320, 180), (still.Window, still.Width, still.Height));
+            Assert.Equal(320 * 180 * 4, still.Pixels.Length);
+            Assert.Contains(still.Pixels, b => b != 0); // a real picture, not an empty buffer
+            Assert.InRange(at, 0, 1.1);
+            position = at;
+        }
+
+        // Resuming after the decoder was released: a new player starts where the old one stopped, not at zero.
+        using var resumed = new VideoRenderer(NullLogger.Instance, "test renderer");
+        await resumed.LoadAsync(Fixture("h264.mp4"), startSeconds: 0.6).WaitAsync(TimeSpan.FromSeconds(15));
+        await resumed.SetTargetsAsync([new RenderTarget(window.Handle, 320, 180, WallpaperFitMode.Fill)]);
+        await resumed.WaitForFrameAsync().WaitAsync(TimeSpan.FromSeconds(10));
+        var (_, start) = await resumed.CaptureStillsAsync();
+        Assert.InRange(start, 0.4, 1.1);
+        Assert.InRange(position, 0, 1.1);
+    }
+
+    [WindowsMediaFact]
+    public async Task Optimizer_shrinks_a_video_to_a_playable_h264_mp4_of_the_requested_size()
+    {
+        var output = Path.Combine(Path.GetTempPath(), $"luma-shrink-{Guid.NewGuid():N}.mp4");
+        try
+        {
+            var reports = new List<double>();
+            var optimizer = new WindowsVideoOptimizer(NullLogger<WindowsVideoOptimizer>.Instance);
+            await optimizer.ShrinkAsync(Fixture("with-audio.mp4"), output, 80, 46, TimeSpan.FromSeconds(1), new SyncProgress(reports.Add));
+
+            var result = await Probe.ProbeAsync(output);
+            Assert.Equal((80, 46), (result.Width, result.Height));
+            Assert.Equal("H.264", result.Codec);
+            Assert.False(result.HasAudio); // wallpapers are silent: the audio track is dropped
+            Assert.InRange(result.Duration.TotalSeconds, 0.8, 1.2);
+            Assert.Equal(1, reports[^1]);
+        }
+        finally
+        {
+            File.Delete(output);
+        }
+    }
+
+    [WindowsMediaFact]
+    public async Task Optimizer_reports_an_unreadable_file_and_leaves_no_output()
+    {
+        var output = Path.Combine(Path.GetTempPath(), $"luma-shrink-{Guid.NewGuid():N}.mp4");
+        var optimizer = new WindowsVideoOptimizer(NullLogger<WindowsVideoOptimizer>.Instance);
+        await Assert.ThrowsAsync<VideoNotPlayableException>(() => optimizer.ShrinkAsync(Fixture("not-a-video.mp4"), output, 80, 46, TimeSpan.FromSeconds(1)));
+        Assert.False(File.Exists(output));
+    }
+
+    /// <summary>
+    /// The whole import of a real oversized video, as the Import button runs it, in a throwaway library: real probe, real
+    /// encoder and this PC's displays. Set LUMA_IMPORT_SOURCE to a video larger than your screen to run it.
+    /// </summary>
+    [ManualImportFact]
+    public async Task Importing_a_real_oversized_video_shrinks_it_to_this_pcs_screens()
+    {
+        var source = Environment.GetEnvironmentVariable("LUMA_IMPORT_SOURCE")!;
+        var originalBytes = new FileInfo(source).Length;
+        await using var env = await Fakes.TestEnvironment.CreateAsync();
+        await using var host = new WindowsDesktopVideoHost(NullLogger<WindowsDesktopVideoHost>.Instance);
+        var library = new Luma.Infrastructure.Videos.VideoLibrary(env.Factory, Probe, env.Paths, NullLogger<Luma.Infrastructure.Videos.VideoLibrary>.Instance,
+            new WindowsVideoOptimizer(NullLogger<WindowsVideoOptimizer>.Instance), new Fakes.FakeSettings(), host);
+        var progress = new List<double>();
+        var watch = Stopwatch.StartNew();
+
+        var result = await library.ImportAsync(source, new SyncProgress(progress.Add));
+
+        var expected = VideoShrinkPolicy.TargetSize(3840, 2160, host.GetDisplays());
+        Assert.NotNull(result.ResizedFrom);
+        Assert.Equal(expected, (result.Video.Info.Width, result.Video.Info.Height));
+        Assert.Equal(VideoContainer.Mp4, result.Video.Info.Container);
+        Assert.Contains(progress, p => p > 0.9 && p < 1); // the Live page shows "Resizing … for your screen…" in this range
+        Assert.Equal(originalBytes, new FileInfo(source).Length);
+        var replayed = await Probe.ProbeAsync(result.Video.FilePath);
+        Assert.Equal("H.264", replayed.Codec);
+        File.Copy(result.Video.PosterPath!, Path.ChangeExtension(source, ".imported.png"), overwrite: true);
+        Console.WriteLine($"IMPORT {result.ResizedFrom!.Value.Width}x{result.ResizedFrom.Value.Height} -> {result.Video.Info.Width}x{result.Video.Info.Height}, " +
+                          $"{originalBytes:N0} -> {result.Video.FileSizeBytes:N0} bytes, {watch.Elapsed.TotalSeconds:N1}s");
+    }
+
+    private sealed class SyncProgress(Action<double> report) : IProgress<double>
+    {
+        public void Report(double value) => report(value);
+    }
+
+    [WindowsMediaFact]
     public async Task Renderer_reports_an_unplayable_file_as_a_non_recoverable_failure()
     {
         using var renderer = new VideoRenderer(NullLogger.Instance, "test renderer");
@@ -208,6 +319,47 @@ public class WindowsVideoTests
 
         await host.HideAsync();
         Assert.Empty(DesktopWindows());
+    }
+
+    [WindowsDesktopFact]
+    public async Task Desktop_host_releases_the_decoder_after_a_long_pause_and_resumes_in_the_same_windows()
+    {
+        var previous = WindowsDesktopVideoHost.ReleaseAfterPause;
+        WindowsDesktopVideoHost.ReleaseAfterPause = TimeSpan.FromMilliseconds(500);
+        try
+        {
+            await using var host = new WindowsDesktopVideoHost(NullLogger<WindowsDesktopVideoHost>.Instance);
+            var names = host.GetDisplays().Select(d => d.DeviceName).ToList();
+            await host.ShowAsync(new VideoPresentation(Fixture("h264.mp4"), names, WallpaperFitMode.Fill), startPaused: false);
+            var windows = DesktopWindows();
+
+            host.SetPaused(true);
+            await WaitUntil(() => host.IsDecoderReleased, TimeSpan.FromSeconds(10));
+            Assert.Equal(0, host.FramesPresented); // no renderer while released
+            Assert.Equal(windows, DesktopWindows()); // the windows stay, showing the paused frame
+            Assert.All(windows, w => Assert.True(User32.IsWindowVisible(w)));
+
+            host.SetPaused(false);
+            await WaitUntil(() => !host.IsDecoderReleased && host.FramesPresented > 10, TimeSpan.FromSeconds(15));
+            Assert.Equal(windows, DesktopWindows());
+
+            await host.HideAsync();
+            Assert.Empty(DesktopWindows());
+        }
+        finally
+        {
+            WindowsDesktopVideoHost.ReleaseAfterPause = previous;
+        }
+
+        static async Task WaitUntil(Func<bool> condition, TimeSpan limit)
+        {
+            var deadline = DateTime.UtcNow + limit;
+            while (!condition())
+            {
+                Assert.True(DateTime.UtcNow < deadline, "timed out");
+                await Task.Delay(100);
+            }
+        }
     }
 
     [WindowsDesktopFact]

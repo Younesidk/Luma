@@ -13,6 +13,9 @@ namespace Luma.Infrastructure.Platform.Windows.Video;
 /// <summary>A window the renderer draws into, sized in physical pixels.</summary>
 internal sealed record RenderTarget(nint Window, int Width, int Height, WallpaperFitMode Fit);
 
+/// <summary>A copy of what one output window last showed, as top-down BGRA pixels (row pitch = width * 4).</summary>
+internal sealed record VideoStill(nint Window, byte[] Pixels, int Width, int Height);
+
 /// <summary>
 /// Owns one <see cref="MediaEngineSession"/> and a render thread. While playing, the thread wakes once per display refresh
 /// (DwmFlush), asks the engine whether a new frame is ready and, only then, copies it into each output's swap chain.
@@ -36,6 +39,7 @@ internal sealed class VideoRenderer : IDisposable
     private bool _broken;
     private volatile bool _stopping;
     private volatile string _filePath = string.Empty;
+    private double _startPosition;
 
     public VideoRenderer(ILogger logger, string name)
     {
@@ -51,10 +55,14 @@ internal sealed class VideoRenderer : IDisposable
     /// <summary>Number of frames presented (diagnostics and tests).</summary>
     public long FramesPresented { get; private set; }
 
-    /// <summary>Opens the file. Completes when the first frame can be drawn; faults with a user-facing message.</summary>
-    public Task LoadAsync(string filePath)
+    /// <summary>
+    /// Opens the file, optionally starting at <paramref name="startSeconds"/> (resuming after the decoder was released).
+    /// Completes when the first frame can be drawn; faults with a user-facing message.
+    /// </summary>
+    public Task LoadAsync(string filePath, double startSeconds = 0)
     {
         _filePath = filePath;
+        _startPosition = double.IsFinite(startSeconds) && startSeconds > 0 ? startSeconds : 0;
         Post(() =>
         {
             try
@@ -103,6 +111,24 @@ internal sealed class VideoRenderer : IDisposable
         _redraw = true;
     });
 
+    /// <summary>
+    /// Copies the current frame as each output shows it, plus the playback position, so the picture can stay on screen
+    /// after the decoder is released. Empty when nothing can be captured.
+    /// </summary>
+    public Task<(IReadOnlyList<VideoStill> Stills, double Position)> CaptureStillsAsync() => Invoke(() =>
+    {
+        var stills = new List<VideoStill>();
+        if (_session is null || _broken || !_loaded.Task.IsCompletedSuccessfully) return ((IReadOnlyList<VideoStill>)stills, 0d);
+        foreach (var output in _outputs)
+        {
+            var layout = VideoLayout.Compute(_videoSize.Width, _videoSize.Height, output.Width, output.Height, output.Fit);
+            if (_session.CaptureFrame(output.Width, output.Height, layout) is { } pixels)
+                stills.Add(new VideoStill(output.Window, pixels, output.Width, output.Height));
+        }
+        var position = _session.CurrentTimeSeconds;
+        return ((IReadOnlyList<VideoStill>)stills, double.IsFinite(position) ? position : 0d);
+    });
+
     /// <summary>Completes once a frame has been presented on every current output.</summary>
     public Task WaitForFrameAsync() => Invoke(() => _framePresented.Task).Unwrap();
 
@@ -131,6 +157,12 @@ internal sealed class VideoRenderer : IDisposable
                     if (_session is null) return;
                     _session.DisableAudioStreams();
                     _videoSize = _session.NativeSize;
+                    if (_startPosition > 0)
+                    {
+                        var duration = _session.DurationSeconds;
+                        if (!double.IsFinite(duration) || _startPosition < duration) _session.Seek(_startPosition);
+                        _startPosition = 0;
+                    }
                     if (_playing) _session.SetPlaying(true);
                     _redraw = true;
                     _loaded.TrySetResult();

@@ -48,7 +48,11 @@ no backend server.
   displays, with hardware decoding where the codec allows. Playback pauses automatically when the desktop is hidden,
   Windows is locked, the screen is off or the PC sleeps, and optionally during fullscreen apps/games and on battery.
   The active video comes back when Luma starts, survives Explorer restarts, and its still frame stays on the desktop
-  whenever the video itself isn't playing.
+  whenever the video itself isn't playing. Videos much larger than your screen (4K on a 1080p display) are shrunk to
+  screen size on import, and a paused video releases its decoder after 20 seconds, so a live wallpaper stays light.
+- **Runs in the background**: closing the window keeps Luma in the taskbar's notification area, where the live
+  wallpaper and rotation keep going. Click the icon to reopen Luma; its menu pauses the video or quits. Launching Luma
+  again brings the running copy back instead of starting a second one. (Settings → Live wallpapers, on by default.)
 - **Themes**: dark (default), light and "match system", six accent colours, comfortable/compact gallery density,
   collapsible sidebar. Keyboard shortcuts: `Ctrl+K` Discover search, `Ctrl+F` page search, `Ctrl+,` settings,
   `Ctrl+R` / `F5` refresh, `Esc` closes the preview or dialog.
@@ -392,21 +396,32 @@ Interrupted imports and unreferenced files are cleaned up at start-up. Video ent
 `Wallpaper` identity, so a future, authorised video provider can feed the same library (its `Wallpaper.FileType` is
 `video/...`).
 
+**Shrinking oversized videos.** A wallpaper is never drawn larger than the display, but the decoder keeps full-size
+frames in memory (in system RAM on integrated GPUs). When an import has at least about twice the pixels the largest
+display needs, Luma re-encodes its copy with a Media Foundation Source Reader (decode and scale, on the GPU through a DXGI
+device manager) and Sink Writer (H.264 in MP4, hardware encoder when available, software fallback), at the smallest
+even size that still covers that display. Audio is dropped. The original file is never touched, the entry keeps the
+original's content hash (so importing it again is still recognised), and if re-encoding fails the video is imported at
+its own size. A 15 s 4K60 VP9 clip becomes 1080p in about 6 s on an Intel Iris Xe.
+
 **Interaction with static wallpapers.** Applying a video also sets its still frame as the Windows wallpaper (so the
 desktop shows a frame of it whenever Luma isn't running). Applying any picture turns the video off; scheduled rotation
 does not replace an active video.
 
 ### Live wallpaper limitations
 
-- Videos play only **while Luma is running**, like rotation. Closing Luma leaves the still frame on the desktop; the
-  video resumes the next time Luma starts.
+- Videos play only **while Luma is running**, like rotation. Closing the window keeps Luma running in the notification
+  area; quitting it (tray icon → Quit Luma) leaves the still frame on the desktop, and the video resumes the next time
+  Luma starts.
 - Windows only. Linux and macOS report "not available" honestly. Windows "N" editions need the Media Feature Pack.
 - One video at a time: different videos on different displays aren't supported. "All displays" fits the same video to
   each display separately (no stretching across displays).
 - Anamorphic (non-square-pixel) videos are laid out by their stored frame size.
 - Animated GIFs aren't supported as live wallpapers (Media Foundation doesn't decode GIF); convert them to MP4.
-- While a video is active, its decoder keeps roughly 120 MB of extra memory even when paused, so that resuming is
-  instant.
+- After a video has been paused for 20 seconds (any reason), its decoder is released and the desktop windows show a copy
+  of the paused frame. Resuming loads the decoder again at the same position, which takes about a second; the paused
+  frame stays on screen meanwhile. Short pauses (switching windows) keep the decoder, so they resume instantly.
+- Videos imported before 1.1.0 keep their original size. Remove and re-import a 4K video to have it shrunk.
 - Each time a *different* WebM (VP9) video is loaded, Windows' WebM/VP9 components keep about 2 kernel handles. The same
   code path with H.264 shows no growth, so this is inside Microsoft's decoder; it only matters after hundreds of switches.
 
@@ -419,12 +434,16 @@ CPU is a share of *all* cores. Numbers are for the playback engine itself, measu
 |---|---:|---:|---:|
 | No video | 0.03 % | 0 % / 0 % | 18 MB |
 | 1080p30 H.264, playing | 0.8 – 1.0 % | 7 % / 8 % | 175 – 184 MB |
-| Paused (any reason) | 0.10 % | 0 % / 0 % | unchanged |
+| Paused (any reason) | 0.10 % | 0 % / 0 % | unchanged for 20 s, then the decoder is released |
 | 4K30 H.264 on a 1080p display | 1.0 % | 18 % / 23 % | 250 MB |
 
 - **Frame rate**: steady 29.9–30.0 fps for 10 minutes of continuous looping, with memory levelling off around 183 MB
   and handle/thread counts flat.
 - **Time to the first frame**: 673 ms cold, about 300 ms when switching videos.
+- **Whole app, Intel Iris Xe, 4K60 VP9 video on a 1080p display** (Task Manager's private working set): about 400 MB
+  with the window open and the video playing, about 120 MB with the window closed and the video paused (decoder
+  released), about 320 MB with the window closed and the video playing. The same video shrunk to 1080p H.264 plays at
+  about 230 MB with the window open.
 - **Whole app**: Luma's time to its window is unchanged with a live wallpaper configured (median 1.17 s vs 1.26 s
   without); the video appears about 1.3 s after the window. With the video paused because the desktop was covered, the
   app's CPU matched a Luma without video (0.1–0.2 %).

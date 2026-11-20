@@ -144,12 +144,20 @@
           <c:SettingRow Heading="This computer" Description="{Binding LiveWallpaperSupportNote}">
             <TextBlock Text="{Binding LiveWallpaperSummary}" Classes="secondary" />
           </c:SettingRow>
+          <c:SettingRow Heading="Keep running in the background when closed"
+                        Description="Closing the window keeps the live wallpaper and rotation going from the icon in the taskbar's notification area. Quit Luma from that icon.">
+            <ToggleSwitch IsChecked="{Binding CloseToTray}" OnContent="" OffContent="" AutomationProperties.Name="Keep running in the background when closed" />
+          </c:SettingRow>
           <c:SettingRow Heading="Pause during fullscreen apps and games"
                         Description="Stops the video on every display while a game or fullscreen app runs, freeing the graphics card. The video always pauses when it's completely hidden.">
             <ToggleSwitch IsChecked="{Binding VideoPauseOnFullscreen}" IsEnabled="{Binding CanUseLiveWallpapers}" OnContent="" OffContent="" AutomationProperties.Name="Pause during fullscreen apps" />
           </c:SettingRow>
           <c:SettingRow Heading="Pause on battery power" Description="Saves battery on laptops. The video resumes when you plug in.">
             <ToggleSwitch IsChecked="{Binding VideoPauseOnBattery}" IsEnabled="{Binding CanUseLiveWallpapers}" OnContent="" OffContent="" AutomationProperties.Name="Pause on battery power" />
+          </c:SettingRow>
+          <c:SettingRow Heading="Shrink videos larger than your screen"
+                        Description="Imported videos with far more pixels than your largest display (for example 4K on a 1080p screen) are re-encoded at screen size. They look the same on the desktop but use much less memory while playing. Your original file is never changed.">
+            <ToggleSwitch IsChecked="{Binding VideoShrinkOnImport}" IsEnabled="{Binding CanUseLiveWallpapers}" OnContent="" OffContent="" AutomationProperties.Name="Shrink videos larger than your screen" />
           </c:SettingRow>
           <c:SettingRow Heading="Video folder" Description="{Binding VideoStorageText}">
             <Button Classes="secondary" Content="Open" Command="{Binding OpenVideoFolderCommand}" />

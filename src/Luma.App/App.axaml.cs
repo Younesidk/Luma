@@ -18,6 +18,10 @@ namespace Luma.App;
 public partial class App : Application
 {
     private ServiceProvider? _services;
+    private IClassicDesktopStyleApplicationLifetime? _desktop;
+    private MainWindow? _window;
+    private TrayIconController? _tray;
+    private bool _quitting;
 
     public override void Initialize() => AvaloniaXamlLoader.Load(this);
 
@@ -37,13 +41,14 @@ public partial class App : Application
             theme.Apply(settings.Current.Theme, settings.Current.AccentPreset);
 
             var shell = _services.GetRequiredService<ShellViewModel>();
-            var window = new MainWindow { DataContext = shell };
-            _services.GetRequiredService<FileDialogService>().Owner = window;
             _services.GetRequiredService<DialogService>();
             _services.GetRequiredService<MemoryDiagnostics>();
-            desktop.MainWindow = window;
-            desktop.ShutdownMode = ShutdownMode.OnMainWindowClose;
+            _desktop = desktop;
+            // Closing the window doesn't end Luma when it keeps running in the notification area; Quit does.
+            desktop.ShutdownMode = ShutdownMode.OnExplicitShutdown;
             desktop.Exit += (_, _) => Shutdown();
+
+            var window = CreateMainWindow();
             window.Opened += async (_, _) =>
             {
                 try
@@ -56,9 +61,97 @@ public partial class App : Application
                 }
                 StartUpdates(desktop);
             };
+            desktop.MainWindow = window;
+
+            _tray = new TrayIconController(this, _services, ShowMainWindow, Quit);
+            Program.Instance?.Listen(() => Dispatcher.UIThread.Post(ShowMainWindow));
         }
 
         base.OnFrameworkInitializationCompleted();
+    }
+
+    private MainWindow CreateMainWindow()
+    {
+        var services = _services ?? throw new InvalidOperationException("Services are not built yet.");
+        var window = new MainWindow { DataContext = services.GetRequiredService<ShellViewModel>() };
+        services.GetRequiredService<FileDialogService>().Owner = window;
+        window.Closing += OnMainWindowClosing;
+        window.Closed += OnMainWindowClosed;
+        _window = window;
+        return window;
+    }
+
+    /// <summary>Shows the window, creating a fresh one when it was closed to the notification area.</summary>
+    public void ShowMainWindow()
+    {
+        if (_desktop is null || _services is null || _quitting) return;
+        if (_window is { } existing)
+        {
+            if (existing.WindowState == WindowState.Minimized) existing.WindowState = WindowState.Normal;
+            existing.Show();
+            existing.Activate();
+            return;
+        }
+
+        var window = CreateMainWindow();
+        _desktop.MainWindow = window;
+        window.Show();
+        window.Activate();
+        _ = ReopenAsync();
+
+        async Task ReopenAsync()
+        {
+            try
+            {
+                await LumaServices.Get<ShellViewModel>().OnWindowReopenedAsync();
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "Reopening the window failed");
+            }
+        }
+    }
+
+    /// <summary>Ends Luma: the live wallpaper stops and its still frame stays on the desktop.</summary>
+    public void Quit()
+    {
+        _quitting = true;
+        _desktop?.Shutdown();
+    }
+
+    private void OnMainWindowClosing(object? sender, WindowClosingEventArgs e)
+    {
+        if (_quitting || _services is null) return;
+        var keepRunning = _services.GetRequiredService<ISettingsService>().Current.CloseToTray && _tray?.IsVisible == true;
+        if (!keepRunning) Quit();
+    }
+
+    /// <summary>
+    /// The window is gone but Luma keeps running: release everything that only exists for the interface (page views,
+    /// decoded thumbnails, the renderer's surfaces) so the background footprint is the services alone.
+    /// </summary>
+    private void OnMainWindowClosed(object? sender, EventArgs e)
+    {
+        if (sender is not MainWindow window) return;
+        window.Closing -= OnMainWindowClosing;
+        window.Closed -= OnMainWindowClosed;
+        if (ReferenceEquals(_window, window)) _window = null;
+        if (_quitting || _services is null) return;
+
+        _services.GetRequiredService<ShellViewModel>().OnWindowClosed();
+        window.DataContext = null;
+        _services.GetRequiredService<FileDialogService>().Owner = null;
+        if (_desktop is not null && ReferenceEquals(_desktop.MainWindow, window)) _desktop.MainWindow = null;
+        foreach (var locator in DataTemplates.OfType<PageViewLocator>()) locator.Clear();
+        _services.GetRequiredService<ImageLoader>().Clear();
+
+        // Give Avalonia a moment to tear down the window's visuals, then return the freed memory to Windows.
+        DispatcherTimer.RunOnce(() =>
+        {
+            GC.Collect(GC.MaxGeneration, GCCollectionMode.Aggressive, blocking: true, compacting: true);
+            GC.WaitForPendingFinalizers();
+            Log.Information("Window closed; Luma keeps running in the notification area");
+        }, TimeSpan.FromSeconds(2));
     }
 
     /// <summary>Background update checks begin only once the window is up; a failure here is logged and otherwise ignored.</summary>
@@ -68,7 +161,7 @@ public partial class App : Application
         {
             var updates = _services!.GetRequiredService<UpdateService>();
             // Velopack's updater waits for Luma to exit; a normal shutdown flushes settings and closes the database first.
-            updates.RestartRequested += (_, _) => Dispatcher.UIThread.Post(() => desktop.Shutdown());
+            updates.RestartRequested += (_, _) => Dispatcher.UIThread.Post(Quit);
             updates.StartBackgroundChecks();
         }
         catch (Exception ex)
@@ -79,6 +172,8 @@ public partial class App : Application
 
     private void Shutdown()
     {
+        _quitting = true;
+        _tray?.Dispose();
         try
         {
             if (_services is null) return;
@@ -126,6 +221,9 @@ public partial class App : Application
 public sealed class PageViewLocator : IDataTemplate
 {
     private readonly Dictionary<object, Control> _views = new(ReferenceEqualityComparer.Instance);
+
+    /// <summary>Forgets the cached views (their window was closed); the next window builds new ones.</summary>
+    public void Clear() => _views.Clear();
 
     public bool Match(object? data) => data is PageViewModel;
 

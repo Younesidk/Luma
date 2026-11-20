@@ -9,6 +9,44 @@ using Luma.Tests.Fakes;
 
 namespace Luma.Tests.Unit;
 
+public class VideoShrinkPolicyTests
+{
+    private static DisplayInfo Display(int width, int height) => new(@"\\.\DISPLAY1", new PixelRect(0, 0, width, height), new PixelRect(0, 0, width, height), true);
+
+    [Theory]
+    [InlineData(3840, 2160, 1920, 1080, 1920, 1080)]   // 4K on 1080p: a quarter of the pixels
+    [InlineData(2560, 1440, 1920, 1080, 1920, 1080)]   // 1440p on 1080p: still worth it (1.78x the pixels)
+    [InlineData(3840, 1600, 1920, 1080, 2592, 1080)]   // ultrawide: keeps covering the height, aspect ratio kept
+    [InlineData(4000, 3001, 1920, 1080, 1920, 1442)]   // odd sizes round up to even
+    public void Shrinks_oversized_videos_so_they_still_cover_the_display(int vw, int vh, int dw, int dh, int ew, int eh) =>
+        Assert.Equal((ew, eh), VideoShrinkPolicy.TargetSize(vw, vh, [Display(dw, dh)]));
+
+    [Theory]
+    [InlineData(1920, 1080, 1920, 1080)]   // already screen size
+    [InlineData(2400, 1350, 1920, 1080)]   // only 1.56x the pixels: not worth a re-encode
+    [InlineData(3840, 2160, 1080, 1920)]   // portrait display needs most of the height of a landscape video
+    [InlineData(1280, 720, 3840, 2160)]    // smaller than the screen: never upscaled
+    public void Leaves_videos_that_are_not_much_larger_than_the_screens(int vw, int vh, int dw, int dh) =>
+        Assert.Null(VideoShrinkPolicy.TargetSize(vw, vh, [Display(dw, dh)]));
+
+    [Fact]
+    public void Uses_the_largest_display_and_ignores_missing_ones()
+    {
+        Assert.Equal((2560, 1440), VideoShrinkPolicy.TargetSize(3840, 2160, [Display(1920, 1080), Display(2560, 1440)]));
+        Assert.Null(VideoShrinkPolicy.TargetSize(3840, 2160, []));
+    }
+
+    [Fact]
+    public void Bitrate_scales_with_pixels_and_frame_rate_within_limits()
+    {
+        Assert.Equal(6_220_800u, VideoShrinkPolicy.Bitrate(1920, 1080, 30));
+        Assert.Equal(12_441_600u, VideoShrinkPolicy.Bitrate(1920, 1080, 60));
+        Assert.Equal(3_000_000u, VideoShrinkPolicy.Bitrate(640, 360, 30));
+        Assert.Equal(40_000_000u, VideoShrinkPolicy.Bitrate(7680, 4320, 60));
+        Assert.Equal(6_220_800u, VideoShrinkPolicy.Bitrate(1920, 1080, double.NaN)); // unknown rate: assume 30
+    }
+}
+
 public class VideoFileValidatorTests
 {
     [Theory]

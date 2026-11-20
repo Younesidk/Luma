@@ -16,7 +16,7 @@ namespace Luma.Infrastructure.Platform.Windows.Video;
 internal sealed unsafe class MediaEngineSession : IDisposable
 {
     // IMFMediaEngine / IMFMediaEngineEx slots (mfmediaengine.h).
-    private const int GetError = 3, SetSource = 6, GetReadyState = 14, SetCurrentTime = 17, GetDuration = 19, IsPaused = 20,
+    private const int GetError = 3, SetSource = 6, GetReadyState = 14, GetCurrentTime = 16, SetCurrentTime = 17, GetDuration = 19, IsPaused = 20,
         SetLoop = 31, Play = 32, Pause = 33, SetMuted = 35, HasVideo = 38, HasAudio = 39, GetNativeVideoSize = 40, Shutdown = 42,
         TransferVideoFrame = 43, OnVideoStreamTick = 44, GetNumberOfStreams = 54, GetStreamAttribute = 55, SetStreamSelection = 57,
         ApplyStreamSelections = 58;
@@ -182,6 +182,9 @@ internal sealed unsafe class MediaEngineSession : IDisposable
         }
     }
 
+    /// <summary>Playback position in seconds (IMFMediaEngine::GetCurrentTime).</summary>
+    public double CurrentTimeSeconds => ((delegate* unmanaged[Stdcall]<nint, double>)Com.Slot(_engine, GetCurrentTime))(_engine);
+
     public void Seek(double seconds) => Com.Check(((delegate* unmanaged[Stdcall]<nint, double, int>)Com.Slot(_engine, SetCurrentTime))(_engine, seconds), "Seek");
 
     /// <summary>True when a new frame is ready since the last call (IMFMediaEngine::OnVideoStreamTick returns S_OK).</summary>
@@ -303,7 +306,11 @@ internal sealed unsafe class MediaEngineSession : IDisposable
     public void LeaveDevice() => ((delegate* unmanaged[Stdcall]<nint, void>)Com.Slot(_multithread, 4))(_multithread);
 
     /// <summary>Grabs the current frame scaled to <paramref name="width"/>×<paramref name="height"/> as BGRA bytes (row pitch = width * 4).</summary>
-    public byte[]? CaptureFrame(int width, int height)
+    public byte[]? CaptureFrame(int width, int height) =>
+        CaptureFrame(width, height, VideoLayout.Compute(width, height, width, height, Core.Enums.WallpaperFitMode.Stretch));
+
+    /// <summary>Grabs the current frame drawn with <paramref name="layout"/> into a <paramref name="width"/>×<paramref name="height"/> BGRA image.</summary>
+    public byte[]? CaptureFrame(int width, int height, VideoFrameLayout layout)
     {
         nint target = 0, staging = 0;
         try
@@ -320,7 +327,7 @@ internal sealed unsafe class MediaEngineSession : IDisposable
             desc.CPUAccessFlags = 0x20000; // CPU_ACCESS_READ
             if (((delegate* unmanaged[Stdcall]<nint, D3D11_TEXTURE2D_DESC*, nint, nint*, int>)Com.Slot(_device, 5))(_device, &desc, 0, &staging) < 0) return null;
 
-            if (TransferFrame(target, VideoLayout.Compute(width, height, width, height, Core.Enums.WallpaperFitMode.Stretch)) < 0) return null;
+            if (TransferFrame(target, layout) < 0) return null;
 
             EnterDevice();
             try

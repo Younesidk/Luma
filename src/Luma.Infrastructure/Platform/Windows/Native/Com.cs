@@ -165,6 +165,15 @@ internal static partial class NativeMethods
     public static partial int MFCreateAttributes(out nint attributes, uint initialSize);
 
     [LibraryImport("mfplat.dll")]
+    public static partial int MFCreateMediaType(out nint mediaType);
+
+    [LibraryImport("mfreadwrite.dll", StringMarshalling = StringMarshalling.Utf16)]
+    public static partial int MFCreateSourceReaderFromURL(string url, nint attributes, out nint reader);
+
+    [LibraryImport("mfreadwrite.dll", StringMarshalling = StringMarshalling.Utf16)]
+    public static partial int MFCreateSinkWriterFromURL(string url, nint byteStream, nint attributes, out nint writer);
+
+    [LibraryImport("mfplat.dll")]
     public static partial int MFCreateDXGIDeviceManager(out uint resetToken, out nint manager);
 
     [LibraryImport("ole32.dll")]

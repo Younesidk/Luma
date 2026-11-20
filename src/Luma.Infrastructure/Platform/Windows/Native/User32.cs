@@ -198,6 +198,54 @@ internal static unsafe partial class User32
     public static partial bool ValidateRect(nint hwnd, nint rect);
 
     [LibraryImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static partial bool InvalidateRect(nint hwnd, nint rect, [MarshalAs(UnmanagedType.Bool)] bool erase);
+
+    [LibraryImport("user32.dll")]
+    public static partial nint BeginPaint(nint hwnd, PAINTSTRUCT* paint);
+
+    [LibraryImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static partial bool EndPaint(nint hwnd, PAINTSTRUCT* paint);
+
+    [LibraryImport("gdi32.dll")]
+    public static partial int SetStretchBltMode(nint hdc, int mode);
+
+    [LibraryImport("gdi32.dll")]
+    public static partial int StretchDIBits(nint hdc, int xDest, int yDest, int destWidth, int destHeight, int xSrc, int ySrc, int srcWidth,
+        int srcHeight, void* bits, BITMAPINFOHEADER* info, uint usage, uint rop);
+
+    public const int HALFTONE = 4;
+    public const uint SRCCOPY = 0x00CC0020;
+
+    [StructLayout(LayoutKind.Sequential)]
+    public struct PAINTSTRUCT
+    {
+        public nint Hdc;
+        public int Erase;
+        public RECT Paint;
+        public int Restore;
+        public int IncUpdate;
+        public fixed byte Reserved[32];
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    public struct BITMAPINFOHEADER
+    {
+        public uint Size;
+        public int Width;
+        public int Height;
+        public ushort Planes;
+        public ushort BitCount;
+        public uint Compression;
+        public uint SizeImage;
+        public int XPelsPerMeter;
+        public int YPelsPerMeter;
+        public uint ClrUsed;
+        public uint ClrImportant;
+    }
+
+    [LibraryImport("user32.dll")]
     public static partial nuint SetTimer(nint hwnd, nuint id, uint elapse, nint func);
 
     [LibraryImport("user32.dll")]

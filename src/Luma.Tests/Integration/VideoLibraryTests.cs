@@ -20,6 +20,87 @@ public class VideoLibraryTests
 
     private static string SourceDir(TestEnvironment env) => Path.Combine(env.Root, "user-files");
 
+    // ----- shrinking oversized videos (fake displays: 1920×1080 and 2560×1440) -----
+
+    private static (VideoLibrary Library, FakeVideoOptimizer Optimizer, FakeSettings Settings) CreateShrinking(
+        TestEnvironment env, (int Width, int Height) videoSize)
+    {
+        var probe = new FakeVideoProbe { SizeOf = FakeVideoOptimizer.Sizes(videoSize) };
+        var optimizer = new FakeVideoOptimizer();
+        var settings = new FakeSettings();
+        var library = new VideoLibrary(env.Factory, probe, env.Paths, NullLogger<VideoLibrary>.Instance, optimizer, settings, new FakeDesktopVideoHost());
+        return (library, optimizer, settings);
+    }
+
+    [Fact]
+    public async Task A_4K_import_is_shrunk_to_cover_the_largest_display_and_the_original_is_untouched()
+    {
+        await using var env = await TestEnvironment.CreateAsync();
+        var (library, optimizer, _) = CreateShrinking(env, (3840, 2160));
+        var original = VideoSamples.WebMBytes(seed: 3);
+        var source = VideoSamples.Write(SourceDir(env), "Miku.webm", original);
+        var progress = new List<double>();
+
+        var result = await library.ImportAsync(source, new SynchronousProgress(progress.Add));
+
+        var call = Assert.Single(optimizer.Calls);
+        Assert.Equal((2560, 1440), (call.Width, call.Height));
+        Assert.NotEqual(source, call.Input); // works on Luma's copy, never the user's file
+        Assert.Equal(new Luma.Core.Models.WallpaperResolution(3840, 2160), result.ResizedFrom);
+        var video = result.Video;
+        Assert.Equal((2560, 1440), (video.Info.Width, video.Info.Height));
+        Assert.Equal(VideoContainer.Mp4, video.Info.Container);
+        Assert.EndsWith(".mp4", video.FilePath);
+        Assert.StartsWith(FakeVideoOptimizer.Marker, File.ReadAllText(video.FilePath));
+        Assert.Equal(new FileInfo(video.FilePath).Length, video.FileSizeBytes);
+        Assert.Equal(original, File.ReadAllBytes(source));
+        Assert.Equal([video.FilePath], Directory.EnumerateFiles(env.Paths.VideosDirectory)); // the full-size .webm copy is gone
+        Assert.Empty(Directory.EnumerateFiles(Path.Combine(env.Paths.VideosDirectory, ".importing")));
+        Assert.Equal(progress.OrderBy(p => p), progress);
+        Assert.Equal(1.0, progress[^1]);
+
+        // The same source again is recognised by its own content, even though the stored copy changed.
+        Assert.True((await library.ImportAsync(source)).AlreadyExisted);
+    }
+
+    [Fact]
+    public async Task Videos_that_already_fit_the_screens_are_kept_as_they_are()
+    {
+        await using var env = await TestEnvironment.CreateAsync();
+        var (library, optimizer, _) = CreateShrinking(env, (2560, 1440));
+        var result = await library.ImportAsync(VideoSamples.Write(SourceDir(env), "fits.mp4", VideoSamples.Mp4Bytes(seed: 1)));
+        Assert.Null(result.ResizedFrom);
+        Assert.Empty(optimizer.Calls);
+    }
+
+    [Fact]
+    public async Task Nothing_is_shrunk_when_the_setting_is_off()
+    {
+        await using var env = await TestEnvironment.CreateAsync();
+        var (library, optimizer, settings) = CreateShrinking(env, (3840, 2160));
+        settings.Update(s => s.VideoShrinkOnImport = false);
+        var result = await library.ImportAsync(VideoSamples.Write(SourceDir(env), "big.mp4", VideoSamples.Mp4Bytes(seed: 2)));
+        Assert.Null(result.ResizedFrom);
+        Assert.Equal(3840, result.Video.Info.Width);
+        Assert.Empty(optimizer.Calls);
+    }
+
+    [Fact]
+    public async Task A_failed_shrink_still_imports_the_video_at_its_own_size()
+    {
+        await using var env = await TestEnvironment.CreateAsync();
+        var (library, optimizer, _) = CreateShrinking(env, (3840, 2160));
+        optimizer.FailWith = "No encoder.";
+        var bytes = VideoSamples.Mp4Bytes(seed: 5);
+
+        var result = await library.ImportAsync(VideoSamples.Write(SourceDir(env), "big.mp4", bytes));
+
+        Assert.Null(result.ResizedFrom);
+        Assert.Equal(3840, result.Video.Info.Width);
+        Assert.Equal(bytes, File.ReadAllBytes(result.Video.FilePath));
+        Assert.Empty(Directory.EnumerateFiles(Path.Combine(env.Paths.VideosDirectory, ".importing")));
+    }
+
     [Fact]
     public async Task Importing_copies_into_the_managed_folder_and_leaves_the_original_alone()
     {

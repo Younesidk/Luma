@@ -182,6 +182,18 @@ public sealed partial class ShellViewModel : ObservableObject
         await ActivateAsync(CurrentPage);
     }
 
+    /// <summary>The window was closed while Luma keeps running in the background: stop page work that only matters on screen.</summary>
+    public void OnWindowClosed()
+    {
+        Preview.Close();
+        Dialogs.CancelCurrent();
+        _activePage?.OnDeactivated();
+        _activePage = null;
+    }
+
+    /// <summary>A new window was opened from the notification area.</summary>
+    public Task OnWindowReopenedAsync() => ActivateAsync(CurrentPage);
+
     [RelayCommand]
     private void ToggleSidebar()
     {

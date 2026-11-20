@@ -18,6 +18,9 @@ public sealed class FakeVideoProbe : IVideoProbe
 
     public TaskCompletionSource? Gate { get; set; }
 
+    /// <summary>The size each probed file reports (default 1920×1080).</summary>
+    public Func<string, (int Width, int Height)> SizeOf { get; set; } = _ => (1920, 1080);
+
     public async Task<VideoProbeResult> ProbeAsync(string filePath, CancellationToken cancellationToken = default)
     {
         Calls++;
@@ -26,8 +29,38 @@ public sealed class FakeVideoProbe : IVideoProbe
         if (FailWith is not null) throw new VideoNotPlayableException(FailWith);
         var pixels = Enumerable.Repeat((byte)255, 4 * 4 * 4).ToArray();
         var png = PngEncoder.EncodeBgra(pixels, 4, 4, 16);
-        return new VideoProbeResult(1920, 1080, TimeSpan.FromSeconds(12), HasAudio: false, png, png);
+        var (width, height) = SizeOf(filePath);
+        return new VideoProbeResult(width, height, TimeSpan.FromSeconds(12), HasAudio: false, png, png);
     }
+}
+
+/// <summary>Writes a small marker file instead of re-encoding; records what it was asked to do.</summary>
+public sealed class FakeVideoOptimizer : IVideoOptimizer
+{
+    public const string Marker = "SHRUNK ";
+
+    public bool IsSupported { get; set; } = true;
+    public string? FailWith { get; set; }
+    public List<(string Input, string Output, int Width, int Height)> Calls { get; } = [];
+
+    public async Task ShrinkAsync(string inputPath, string outputPath, int width, int height, TimeSpan duration, IProgress<double>? progress = null,
+        CancellationToken cancellationToken = default)
+    {
+        Calls.Add((inputPath, outputPath, width, height));
+        if (FailWith is not null) throw new VideoNotPlayableException(FailWith);
+        await File.WriteAllTextAsync(outputPath, $"{Marker}{width}x{height}", cancellationToken);
+        progress?.Report(0.5);
+        progress?.Report(1);
+    }
+
+    /// <summary>Probe sizes for files written by this fake: "SHRUNK WxH" files report W×H, everything else <paramref name="original"/>.</summary>
+    public static Func<string, (int Width, int Height)> Sizes((int Width, int Height) original) => path =>
+    {
+        var text = System.Text.Encoding.ASCII.GetString(File.ReadAllBytes(path));
+        if (!text.StartsWith(Marker, StringComparison.Ordinal)) return original;
+        var parts = text[Marker.Length..].Split('x');
+        return (int.Parse(parts[0]), int.Parse(parts[1]));
+    };
 }
 
 /// <summary>Records what the service asked the desktop host to do and lets tests raise host events. Mocked: no windows exist.</summary>
