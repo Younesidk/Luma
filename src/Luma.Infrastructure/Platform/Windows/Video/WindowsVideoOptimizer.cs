@@ -43,6 +43,14 @@ public sealed unsafe class WindowsVideoOptimizer(ILogger<WindowsVideoOptimizer> 
     private static readonly Guid MF_READWRITE_ENABLE_HARDWARE_TRANSFORMS = new("a634a91c-822b-41b9-a494-4de4643612b0");
     private static readonly Guid MF_TRANSCODE_CONTAINERTYPE = new("150ff23f-4abc-478b-ac4f-e1916fba1cca");
     private static readonly Guid MFTranscodeContainerType_MPEG4 = new("dc6cd05d-b9d0-40ef-bd35-fa622c1ab28a");
+    private static readonly Guid MF_MT_MPEG2_PROFILE = new("ad76a80b-2d5c-4e0b-b375-64e520137036");
+    private const uint H264ProfileHigh = 100; // eAVEncH264VProfile_High
+    // Encoder settings (codecapi.h), handed to the encoder through SetInputMediaType's encoding parameters.
+    private static readonly Guid CODECAPI_AVEncCommonRateControlMode = new("1c0608e9-370c-4710-8a58-cb6181c42423");
+    private static readonly Guid CODECAPI_AVEncCommonMeanBitRate = new("f7222374-2144-4815-b550-a37f8e12ee52");
+    private static readonly Guid CODECAPI_AVEncCommonMaxBitRate = new("9651eae4-39b9-4ebf-85ef-d7f444ec7465");
+    private static readonly Guid CODECAPI_AVEncCommonQualityVsSpeed = new("98332df8-03cd-476b-89fa-3f9e442dec9f");
+    private const uint PeakConstrainedVbr = 1; // eAVEncCommonRateControlMode_PeakConstrainedVBR
 
     public bool IsSupported => MediaEngineSession.EnsureMediaFoundation() is null;
 
@@ -86,7 +94,7 @@ public sealed unsafe class WindowsVideoOptimizer(ILogger<WindowsVideoOptimizer> 
     {
         nint device = 0, context = 0, multithread = 0, manager = 0;
         nint readerAttributes = 0, reader = 0, requested = 0, decoded = 0;
-        nint writerAttributes = 0, writer = 0, encoded = 0;
+        nint writerAttributes = 0, writer = 0, encoded = 0, encoderSettings = 0;
         try
         {
             if (useGpu)
@@ -138,7 +146,10 @@ public sealed unsafe class WindowsVideoOptimizer(ILogger<WindowsVideoOptimizer> 
             Com.Check(NativeMethods.MFCreateMediaType(out encoded), "MFCreateMediaType");
             SetGuidValue(encoded, MfGuids.MF_MT_MAJOR_TYPE, MfGuids.MFMediaType_Video);
             SetGuidValue(encoded, MfGuids.MF_MT_SUBTYPE, MFVideoFormat_H264);
-            SetUInt32(encoded, MF_MT_AVG_BITRATE, VideoShrinkPolicy.Bitrate(width, height, (double)rateNumerator / rateDenominator));
+            var bitrate = VideoShrinkPolicy.Bitrate(width, height, (double)rateNumerator / rateDenominator);
+            SetUInt32(encoded, MF_MT_AVG_BITRATE, bitrate);
+            // High profile (CABAC, B-frames, 8x8 transforms): encoders otherwise often default to Baseline, which looks much worse at the same bitrate.
+            SetUInt32(encoded, MF_MT_MPEG2_PROFILE, H264ProfileHigh);
             SetUInt32(encoded, MF_MT_INTERLACE_MODE, ProgressiveVideo);
             SetUInt64(encoded, MF_MT_FRAME_SIZE, Pack((uint)width, (uint)height));
             SetUInt64(encoded, MF_MT_FRAME_RATE, Pack(rateNumerator, rateDenominator));
@@ -146,8 +157,16 @@ public sealed unsafe class WindowsVideoOptimizer(ILogger<WindowsVideoOptimizer> 
 
             uint stream;
             Com.Check(((delegate* unmanaged[Stdcall]<nint, nint, uint*, int>)Com.Slot(writer, AddStream))(writer, encoded, &stream), "Adding the video stream");
-            Com.Check(((delegate* unmanaged[Stdcall]<nint, uint, nint, nint, int>)Com.Slot(writer, SetInputMediaType))(writer, stream, decoded, 0),
-                "Connecting the encoder");
+            // Peak-constrained VBR instead of the usual CBR default, so busy scenes get more bits, and the slower, better encoder
+            // presets. An encoder that rejects these settings still gets a working connection with its defaults.
+            Com.Check(NativeMethods.MFCreateAttributes(out encoderSettings, 4), "MFCreateAttributes");
+            SetUInt32(encoderSettings, CODECAPI_AVEncCommonRateControlMode, PeakConstrainedVbr);
+            SetUInt32(encoderSettings, CODECAPI_AVEncCommonMeanBitRate, bitrate);
+            SetUInt32(encoderSettings, CODECAPI_AVEncCommonMaxBitRate, VideoShrinkPolicy.PeakBitrate(bitrate));
+            SetUInt32(encoderSettings, CODECAPI_AVEncCommonQualityVsSpeed, 85);
+            var setInput = (delegate* unmanaged[Stdcall]<nint, uint, nint, nint, int>)Com.Slot(writer, SetInputMediaType);
+            if (setInput(writer, stream, decoded, encoderSettings) < 0)
+                Com.Check(setInput(writer, stream, decoded, 0), "Connecting the encoder");
             Com.Check(((delegate* unmanaged[Stdcall]<nint, int>)Com.Slot(writer, BeginWriting))(writer), "BeginWriting");
 
             // ----- copy every frame, starting the output at time zero -----
@@ -199,6 +218,7 @@ public sealed unsafe class WindowsVideoOptimizer(ILogger<WindowsVideoOptimizer> 
         finally
         {
             // The writer closes its file on release (incomplete when Finalize didn't run; the caller deletes it).
+            Com.Release(encoderSettings);
             Com.Release(encoded);
             Com.Release(writer);
             Com.Release(writerAttributes);

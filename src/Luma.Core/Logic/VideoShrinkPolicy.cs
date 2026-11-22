@@ -29,10 +29,17 @@ public static class VideoShrinkPolicy
         static int Even(double value) => (int)value + ((int)value & 1);
     }
 
-    /// <summary>H.264 bitrate for a looping wallpaper: 0.1 bits per pixel per frame (~6 Mbit/s at 1080p30, ~12 at 1080p60), 3–40 Mbit/s.</summary>
+    /// <summary>
+    /// Average H.264 bitrate for a looping wallpaper: 0.25 bits per pixel per frame (~15.5 Mbit/s at 1080p30, ~31 at 1080p60),
+    /// 5–80 Mbit/s. Generous on purpose: the copy replaces a high-bitrate original and is watched full screen, and hardware
+    /// encoders need more bits than a good software encoder for the same picture. Bitrate barely affects playback memory.
+    /// </summary>
     public static uint Bitrate(int width, int height, double framesPerSecond)
     {
         var fps = double.IsFinite(framesPerSecond) && framesPerSecond > 0 ? Math.Min(framesPerSecond, 120) : 30;
-        return (uint)Math.Clamp(width * (double)height * fps * 0.1, 3_000_000, 40_000_000);
+        return (uint)Math.Clamp(width * (double)height * fps * 0.25, 5_000_000, 80_000_000);
     }
+
+    /// <summary>Peak bitrate for peak-constrained VBR: 1.5x the average, so detailed or fast scenes get the bits they need.</summary>
+    public static uint PeakBitrate(uint averageBitrate) => (uint)Math.Min(averageBitrate * 1.5, 120_000_000);
 }

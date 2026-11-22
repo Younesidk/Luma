@@ -415,7 +415,8 @@ Interrupted imports and unreferenced files are cleaned up at start-up. Video ent
 **Shrinking oversized videos.** A wallpaper is never drawn larger than the display, but the decoder keeps full-size
 frames in memory (in system RAM on integrated GPUs). When an import has at least about twice the pixels the largest
 display needs, Luma re-encodes its copy with a Media Foundation Source Reader (decode and scale, on the GPU through a DXGI
-device manager) and Sink Writer (H.264 in MP4, hardware encoder when available, software fallback), at the smallest
+device manager) and Sink Writer (H.264 High profile in MP4, peak-constrained VBR at 0.25 bits per pixel per frame,
+hardware encoder when available, software fallback), at the smallest
 even size that still covers that display. Audio is dropped. The original file is never touched, the entry keeps the
 original's content hash (so importing it again is still recognised), and if re-encoding fails the video is imported at
 its own size. A 15 s 4K60 VP9 clip becomes 1080p in about 6 s on an Intel Iris Xe.

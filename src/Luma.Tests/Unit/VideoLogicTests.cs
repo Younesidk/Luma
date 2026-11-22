@@ -39,11 +39,18 @@ public class VideoShrinkPolicyTests
     [Fact]
     public void Bitrate_scales_with_pixels_and_frame_rate_within_limits()
     {
-        Assert.Equal(6_220_800u, VideoShrinkPolicy.Bitrate(1920, 1080, 30));
-        Assert.Equal(12_441_600u, VideoShrinkPolicy.Bitrate(1920, 1080, 60));
-        Assert.Equal(3_000_000u, VideoShrinkPolicy.Bitrate(640, 360, 30));
-        Assert.Equal(40_000_000u, VideoShrinkPolicy.Bitrate(7680, 4320, 60));
-        Assert.Equal(6_220_800u, VideoShrinkPolicy.Bitrate(1920, 1080, double.NaN)); // unknown rate: assume 30
+        Assert.Equal(15_552_000u, VideoShrinkPolicy.Bitrate(1920, 1080, 30));
+        Assert.Equal(31_104_000u, VideoShrinkPolicy.Bitrate(1920, 1080, 60));
+        Assert.Equal(5_000_000u, VideoShrinkPolicy.Bitrate(640, 360, 30));
+        Assert.Equal(80_000_000u, VideoShrinkPolicy.Bitrate(7680, 4320, 60));
+        Assert.Equal(15_552_000u, VideoShrinkPolicy.Bitrate(1920, 1080, double.NaN)); // unknown rate: assume 30
+    }
+
+    [Fact]
+    public void Peak_bitrate_is_one_and_a_half_times_the_average_within_limits()
+    {
+        Assert.Equal(23_328_000u, VideoShrinkPolicy.PeakBitrate(15_552_000));
+        Assert.Equal(120_000_000u, VideoShrinkPolicy.PeakBitrate(80_000_000 * 2));
     }
 }
 
