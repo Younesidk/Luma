@@ -1,5 +1,4 @@
 using System.Collections.ObjectModel;
-using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
@@ -41,7 +40,7 @@ public sealed partial class ToastViewModel : ObservableObject
 }
 
 /// <summary>Transient, non-blocking notifications shown in the corner of the window.</summary>
-public sealed class ToastService : IToastService
+public sealed class ToastService(IUiDispatcher dispatcher) : IToastService
 {
     private const int MaxVisible = 4;
     private readonly ObservableCollection<ToastViewModel> _toasts = [];
@@ -51,7 +50,7 @@ public sealed class ToastService : IToastService
 
     public void Show(string message, ToastKind kind = ToastKind.Info, string? actionText = null, Action? action = null)
     {
-        Dispatcher.UIThread.Post(() =>
+        dispatcher.Post(() =>
         {
             if (_last is { } last && last.Message == message && DateTime.UtcNow - last.At < TimeSpan.FromSeconds(1.5)) return;
             _last = (message, DateTime.UtcNow);
@@ -68,7 +67,7 @@ public sealed class ToastService : IToastService
     private async Task DismissLaterAsync(ToastViewModel toast, TimeSpan delay)
     {
         await Task.Delay(delay);
-        Dispatcher.UIThread.Post(() => Remove(toast));
+        dispatcher.Post(() => Remove(toast));
     }
 
     private void Remove(ToastViewModel toast) => _toasts.Remove(toast);

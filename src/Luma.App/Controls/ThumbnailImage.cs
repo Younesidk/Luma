@@ -1,10 +1,9 @@
-﻿using Avalonia;
-using Avalonia.Animation;
-using Avalonia.Controls;
-using Avalonia.Media;
-using Avalonia.VisualTree;
 using Luma.App.Services;
 using Microsoft.Extensions.Logging;
+using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Data;
+using Microsoft.UI.Xaml.Media;
 
 namespace Luma.App.Controls;
 
@@ -17,69 +16,87 @@ public enum ImageLoadState
 }
 
 /// <summary>
-/// Lazily loads its image only while it is part of the visual tree. When a virtualised row scrolls away the pending
-/// request is cancelled and the bitmap lease is returned, so off-screen cards cost (almost) no memory.
+/// Lazily loads its image only while it is loaded in the visual tree. When a virtualised card scrolls away (Unloaded)
+/// the pending request is cancelled and the bitmap lease is returned, so off-screen cards cost (almost) no memory.
+/// The image covers the control (<c>UniformToFill</c>, centred crop) and honours <see cref="Control.CornerRadius"/>.
 /// </summary>
-public sealed class ThumbnailImage : Control
+public sealed partial class ThumbnailImage : UserControl
 {
-    public static readonly StyledProperty<string?> SourceProperty = AvaloniaProperty.Register<ThumbnailImage, string?>(nameof(Source));
-    public static readonly StyledProperty<string?> FallbackSourceProperty = AvaloniaProperty.Register<ThumbnailImage, string?>(nameof(FallbackSource));
-    public static readonly StyledProperty<int> DecodeWidthProperty = AvaloniaProperty.Register<ThumbnailImage, int>(nameof(DecodeWidth), 420);
-    public static readonly StyledProperty<ImageLoadState> StateProperty = AvaloniaProperty.Register<ThumbnailImage, ImageLoadState>(nameof(State));
+    public static readonly DependencyProperty SourceProperty = DependencyProperty.Register(
+        nameof(Source), typeof(string), typeof(ThumbnailImage), new PropertyMetadata(null, (d, _) => ((ThumbnailImage)d).OnSourceChanged()));
 
+    public static readonly DependencyProperty FallbackSourceProperty = DependencyProperty.Register(
+        nameof(FallbackSource), typeof(string), typeof(ThumbnailImage), new PropertyMetadata(null));
+
+    public static readonly DependencyProperty DecodeWidthProperty = DependencyProperty.Register(
+        nameof(DecodeWidth), typeof(int), typeof(ThumbnailImage), new PropertyMetadata(420));
+
+    public static readonly DependencyProperty StateProperty = DependencyProperty.Register(
+        nameof(State), typeof(ImageLoadState), typeof(ThumbnailImage), new PropertyMetadata(ImageLoadState.Idle, (d, _) => ((ThumbnailImage)d).OnStateChanged()));
+
+    public static readonly DependencyProperty IsFailedProperty = DependencyProperty.Register(
+        nameof(IsFailed), typeof(bool), typeof(ThumbnailImage), new PropertyMetadata(false));
+
+    public static readonly DependencyProperty IsLoadingProperty = DependencyProperty.Register(
+        nameof(IsLoading), typeof(bool), typeof(ThumbnailImage), new PropertyMetadata(false));
+
+    private static readonly TimeSpan FadeDuration = TimeSpan.FromMilliseconds(220);
+
+    private readonly ImageBrush _brush;
+    private readonly ScalarTransition _fade = new() { Duration = FadeDuration };
     private CancellationTokenSource? _cts;
     private ImageLease? _lease;
     private bool _attached;
 
-    static ThumbnailImage()
-    {
-        AffectsRender<ThumbnailImage>(StateProperty);
-        SourceProperty.Changed.AddClassHandler<ThumbnailImage>((image, _) => image.OnSourceChanged());
-    }
-
     public ThumbnailImage()
     {
-        Transitions = [new DoubleTransition { Property = OpacityProperty, Duration = TimeSpan.FromMilliseconds(220) }];
         IsHitTestVisible = false;
+        IsTabStop = false;
+        HorizontalContentAlignment = HorizontalAlignment.Stretch;
+        VerticalContentAlignment = VerticalAlignment.Stretch;
+        _brush = new ImageBrush { Stretch = Stretch.UniformToFill, AlignmentX = AlignmentX.Center, AlignmentY = AlignmentY.Center };
+        var surface = new Border { Background = _brush };
+        // The brush is clipped by the border's rounded corners, so cards can round the image without extra clipping.
+        surface.SetBinding(Border.CornerRadiusProperty, new Binding { Source = this, Path = new PropertyPath(nameof(CornerRadius)) });
+        Content = surface;
+        OpacityTransition = _fade;
+        Loaded += OnLoaded;
+        Unloaded += OnUnloaded;
     }
 
-    public string? Source { get => GetValue(SourceProperty); set => SetValue(SourceProperty, value); }
-
-    public int DecodeWidth { get => GetValue(DecodeWidthProperty); set => SetValue(DecodeWidthProperty, value); }
+    /// <summary>Image address (URL or local path) passed to <see cref="ImageLoader.AcquireThumbnailAsync"/>.</summary>
+    public string? Source { get => (string?)GetValue(SourceProperty); set => SetValue(SourceProperty, value); }
 
     /// <summary>Tried once when <see cref="Source"/> fails to load.</summary>
-    public string? FallbackSource { get => GetValue(FallbackSourceProperty); set => SetValue(FallbackSourceProperty, value); }
+    public string? FallbackSource { get => (string?)GetValue(FallbackSourceProperty); set => SetValue(FallbackSourceProperty, value); }
 
-    public static readonly StyledProperty<bool> IsFailedProperty = AvaloniaProperty.Register<ThumbnailImage, bool>(nameof(IsFailed));
-    public static readonly StyledProperty<bool> IsLoadingProperty = AvaloniaProperty.Register<ThumbnailImage, bool>(nameof(IsLoading));
+    /// <summary>Decode width in pixels (default 420). Never upscales.</summary>
+    public int DecodeWidth { get => (int)GetValue(DecodeWidthProperty); set => SetValue(DecodeWidthProperty, value); }
 
-    public ImageLoadState State { get => GetValue(StateProperty); private set => SetValue(StateProperty, value); }
+    public ImageLoadState State { get => (ImageLoadState)GetValue(StateProperty); private set => SetValue(StateProperty, value); }
 
     /// <summary>True when the image could not be loaded (lets templates show a calm fallback).</summary>
-    public bool IsFailed { get => GetValue(IsFailedProperty); private set => SetValue(IsFailedProperty, value); }
+    public bool IsFailed { get => (bool)GetValue(IsFailedProperty); private set => SetValue(IsFailedProperty, value); }
 
-    public bool IsLoading { get => GetValue(IsLoadingProperty); private set => SetValue(IsLoadingProperty, value); }
+    public bool IsLoading { get => (bool)GetValue(IsLoadingProperty); private set => SetValue(IsLoadingProperty, value); }
 
-    protected override void OnPropertyChanged(AvaloniaPropertyChangedEventArgs change)
+    private void OnStateChanged()
     {
-        base.OnPropertyChanged(change);
-        if (change.Property == StateProperty)
-        {
-            IsFailed = State == ImageLoadState.Failed;
-            IsLoading = State == ImageLoadState.Loading;
-        }
+        IsFailed = State == ImageLoadState.Failed;
+        IsLoading = State == ImageLoadState.Loading;
     }
 
-    protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
+    private void OnLoaded(object sender, RoutedEventArgs e)
     {
-        base.OnAttachedToVisualTree(e);
+        if (_attached) return;
         _attached = true;
         _ = LoadAsync();
     }
 
-    protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
+    private void OnUnloaded(object sender, RoutedEventArgs e)
     {
-        base.OnDetachedFromVisualTree(e);
+        // Loaded/Unloaded can arrive out of order when an element is re-parented; only release when really gone.
+        if (IsLoaded) return;
         _attached = false;
         Release();
     }
@@ -103,11 +120,21 @@ public sealed class ThumbnailImage : Control
         _cts?.Cancel();
         var cts = _cts = new CancellationTokenSource();
         State = ImageLoadState.Loading;
-        var loader = LumaServices.Get<ImageLoader>();
+        ImageLoader loader;
+        try
+        {
+            loader = LumaServices.Get<ImageLoader>();
+        }
+        catch (InvalidOperationException)
+        {
+            State = ImageLoadState.Idle; // designer / services not ready
+            return;
+        }
+
         try
         {
             var pending = AcquireWithFallbackAsync(loader, source, cts.Token);
-            if (!pending.IsCompleted) Opacity = 0; // fade in only when the image had to be fetched
+            if (!pending.IsCompleted) HideInstantly(); // fade in only when the image had to be fetched
             var lease = await pending;
             if (cts.IsCancellationRequested)
             {
@@ -115,11 +142,12 @@ public sealed class ThumbnailImage : Control
                 return;
             }
 
-            _lease?.Dispose();
+            var previous = _lease;
             _lease = lease;
+            _brush.ImageSource = lease.Source;
+            previous?.Dispose();
             State = ImageLoadState.Loaded;
             Opacity = 1;
-            InvalidateVisual();
         }
         catch (OperationCanceledException)
         {
@@ -130,48 +158,46 @@ public sealed class ThumbnailImage : Control
             if (cts.IsCancellationRequested) return;
             State = ImageLoadState.Failed;
             Opacity = 1;
-            LumaServices.Get<ILogger<ThumbnailImage>>().LogDebug(ex, "Thumbnail failed to load: {Source}", source);
+            try
+            {
+                LumaServices.Get<ILogger<ThumbnailImage>>().LogDebug(ex, "Thumbnail failed to load: {Source}", source);
+            }
+            catch (InvalidOperationException)
+            {
+                // logging unavailable
+            }
         }
     }
 
     private async Task<ImageLease> AcquireWithFallbackAsync(ImageLoader loader, string source, CancellationToken ct)
     {
+        var fallback = FallbackSource;
         try
         {
             return await loader.AcquireThumbnailAsync(source, DecodeWidth, ct);
         }
-        catch (Exception) when (!ct.IsCancellationRequested && !string.IsNullOrWhiteSpace(FallbackSource) && FallbackSource != source)
+        catch (Exception) when (!ct.IsCancellationRequested && !string.IsNullOrWhiteSpace(fallback) && fallback != source)
         {
-            return await loader.AcquireThumbnailAsync(FallbackSource!, DecodeWidth, ct);
+            return await loader.AcquireThumbnailAsync(fallback, DecodeWidth, ct);
         }
+    }
+
+    /// <summary>Drops to transparent without animating, so only the fade-in is visible.</summary>
+    private void HideInstantly()
+    {
+        OpacityTransition = null;
+        Opacity = 0;
+        OpacityTransition = _fade;
     }
 
     private void Release()
     {
         _cts?.Cancel();
         _cts = null;
+        // Detach before releasing: the last release disposes the SoftwareBitmapSource.
+        _brush.ImageSource = null;
         _lease?.Dispose();
         _lease = null;
         State = ImageLoadState.Idle;
     }
-
-    public override void Render(DrawingContext context)
-    {
-        if (_lease is null) return;
-        var bitmap = _lease.Bitmap;
-        var dest = new Rect(Bounds.Size);
-        if (dest.Width <= 0 || dest.Height <= 0 || bitmap.Size.Width <= 0 || bitmap.Size.Height <= 0) return;
-
-        // "UniformToFill": crop the source so it covers the destination without distortion.
-        var scale = Math.Max(dest.Width / bitmap.Size.Width, dest.Height / bitmap.Size.Height);
-        var sw = dest.Width / scale;
-        var sh = dest.Height / scale;
-        var source = new Rect((bitmap.Size.Width - sw) / 2, (bitmap.Size.Height - sh) / 2, sw, sh);
-        context.DrawImage(bitmap, source, dest);
-    }
 }
-
-
-
-
-

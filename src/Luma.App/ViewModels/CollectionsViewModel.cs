@@ -33,6 +33,7 @@ public sealed class CollectionCardViewModel(WallpaperCollection collection)
 
 public sealed partial class CollectionsViewModel : PageViewModel
 {
+    private readonly IUiDispatcher _dispatcher;
     private readonly ICollectionService _collections;
     private readonly WallpaperItemFactory _factory;
     private readonly IDialogService _dialogs;
@@ -44,15 +45,16 @@ public sealed partial class CollectionsViewModel : PageViewModel
 
 
     public CollectionsViewModel(ICollectionService collections, WallpaperItemFactory factory, IDialogService dialogs,
-        IToastService toasts, ShellStartup startup, ILogger<CollectionsViewModel> logger)
+        IToastService toasts, ShellStartup startup, IUiDispatcher dispatcher, ILogger<CollectionsViewModel> logger)
     {
+        _dispatcher = dispatcher;
         _collections = collections;
         _factory = factory;
         _dialogs = dialogs;
         _toasts = toasts;
         _startup = startup;
         _logger = logger;
-        _collections.CollectionsChanged += (_, _) => Avalonia.Threading.Dispatcher.UIThread.Post(() =>
+        _collections.CollectionsChanged += (_, _) => _dispatcher.Post(() =>
         {
             if (_active) _ = ReloadAsync();
         });

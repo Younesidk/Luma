@@ -41,6 +41,8 @@ public static class LumaHost
 
     private static void AddApplication(IServiceCollection services)
     {
+        services.AddSingleton<UiDispatcher>();
+        services.AddSingleton<IUiDispatcher>(sp => sp.GetRequiredService<UiDispatcher>());
         services.AddSingleton<ImageLoader>();
         services.AddSingleton<IImageTranscoder, ImageTranscoder>();
         services.AddSingleton<MemoryDiagnostics>();

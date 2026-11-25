@@ -1,61 +1,142 @@
-using Avalonia;
-using Avalonia.Controls;
-using Avalonia.Platform;
-using Avalonia.Threading;
 using Luma.App.Services;
-using Luma.Core.Interfaces;
 using Microsoft.Extensions.Logging;
+using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Media;
+using Windows.Media.Core;
+using Windows.Media.Playback;
 
 namespace Luma.App.Controls;
 
 /// <summary>
-/// Plays a video inside Luma's window (muted, looping, letterboxed). The picture is drawn by the platform video engine
-/// into a native child window, so Avalonia content can't be drawn on top of it: keep overlays outside its bounds.
-/// A control instance plays one <see cref="Source"/>; bind a new instance (e.g. through a data template) to change videos.
+/// Plays a local video inside Luma's window: muted, looping, letterboxed (<c>Uniform</c>), no transport controls.
+/// It is a normal XAML element (no child HWND), so overlays can be drawn on top.
+/// The <see cref="MediaPlayer"/> is disposed on <c>Unloaded</c> and whenever <see cref="Source"/> changes, so the file
+/// is never left locked. Playback errors are reported through <see cref="Error"/> (bind it TwoWay).
 /// </summary>
-public sealed class VideoPreviewHost : NativeControlHost
+public sealed partial class VideoPreviewHost : UserControl
 {
-    public static readonly StyledProperty<string?> SourceProperty = AvaloniaProperty.Register<VideoPreviewHost, string?>(nameof(Source));
+    public static readonly DependencyProperty SourceProperty = DependencyProperty.Register(
+        nameof(Source), typeof(string), typeof(VideoPreviewHost), new PropertyMetadata(null, (d, _) => ((VideoPreviewHost)d).OnSourceChanged()));
 
-    public static readonly StyledProperty<string?> ErrorProperty =
-        AvaloniaProperty.Register<VideoPreviewHost, string?>(nameof(Error), defaultBindingMode: Avalonia.Data.BindingMode.OneWayToSource);
+    public static readonly DependencyProperty ErrorProperty = DependencyProperty.Register(
+        nameof(Error), typeof(string), typeof(VideoPreviewHost), new PropertyMetadata(null));
 
-    private IVideoPreviewSurface? _surface;
+    private readonly MediaPlayerElement _element;
+    private MediaPlayer? _player;
+    private MediaSource? _media;
 
-    public string? Source { get => GetValue(SourceProperty); set => SetValue(SourceProperty, value); }
-
-    /// <summary>Set by the control when the video can't be played.</summary>
-    public string? Error { get => GetValue(ErrorProperty); set => SetValue(ErrorProperty, value); }
-
-    protected override IPlatformHandle CreateNativeControlCore(IPlatformHandle parent)
+    public VideoPreviewHost()
     {
-        var factory = LumaServices.Get<IVideoPreviewFactory>();
-        if (Source is { Length: > 0 } path && factory.IsSupported && parent.HandleDescriptor == "HWND")
+        IsTabStop = false;
+        HorizontalContentAlignment = HorizontalAlignment.Stretch;
+        VerticalContentAlignment = VerticalAlignment.Stretch;
+        _element = new MediaPlayerElement
         {
-            try
-            {
-                var surface = factory.Create(parent.Handle, path);
-                surface.Failed += (_, message) => Dispatcher.UIThread.Post(() => Error = message);
-                _surface = surface;
-                return new PlatformHandle(surface.Handle, "HWND");
-            }
-            catch (Exception ex)
-            {
-                LumaServices.Get<ILogger<VideoPreviewHost>>().LogError(ex, "The video preview couldn't be created");
-                Error = "The preview couldn't be started.";
-            }
-        }
-        return base.CreateNativeControlCore(parent);
+            AreTransportControlsEnabled = false,
+            AutoPlay = true,
+            Stretch = Stretch.Uniform,
+            IsTabStop = false
+        };
+        Content = _element;
+        Loaded += (_, _) => Start();
+        Unloaded += (_, _) =>
+        {
+            if (!IsLoaded) Stop();
+        };
     }
 
-    protected override void DestroyNativeControlCore(IPlatformHandle control)
+    /// <summary>Full path of the local video file to play.</summary>
+    public string? Source { get => (string?)GetValue(SourceProperty); set => SetValue(SourceProperty, value); }
+
+    /// <summary>Set by the control when the video can't be played (null while playing fine).</summary>
+    public string? Error { get => (string?)GetValue(ErrorProperty); set => SetValue(ErrorProperty, value); }
+
+    private void OnSourceChanged()
     {
-        if (_surface is not null && control.Handle == _surface.Handle)
+        Stop();
+        if (IsLoaded) Start();
+    }
+
+    private void Start()
+    {
+        if (_player is not null || Source is not { Length: > 0 } path) return;
+        Error = null;
+        try
         {
-            _surface.Dispose();
-            _surface = null;
-            return;
+            var media = MediaSource.CreateFromUri(new Uri(Path.GetFullPath(path)));
+            var player = new MediaPlayer
+            {
+                IsLoopingEnabled = true,
+                IsMuted = true,
+                AutoPlay = true,
+                Source = media
+            };
+            player.MediaFailed += OnMediaFailed;
+            _media = media;
+            _player = player;
+            _element.SetMediaPlayer(player);
         }
-        base.DestroyNativeControlCore(control);
+        catch (Exception ex)
+        {
+            Log(ex, "The video preview couldn't be created");
+            Error = "The preview couldn't be started.";
+            Stop();
+        }
+    }
+
+    private void OnMediaFailed(MediaPlayer sender, MediaPlayerFailedEventArgs args)
+    {
+        // Raised on a media thread.
+        var message = string.IsNullOrWhiteSpace(args.ErrorMessage) ? "This video can't be played." : args.ErrorMessage;
+        Log(args.ExtendedErrorCode, $"Video preview failed: {args.Error}");
+        void Report()
+        {
+            if (ReferenceEquals(_player, sender)) Error = message;
+        }
+        try
+        {
+            LumaServices.Get<IUiDispatcher>().Post(Report);
+        }
+        catch (InvalidOperationException)
+        {
+            DispatcherQueue?.TryEnqueue(Report);
+        }
+    }
+
+    private void Stop()
+    {
+        var player = _player;
+        var media = _media;
+        _player = null;
+        _media = null;
+        _element.SetMediaPlayer(null);
+        if (player is not null)
+        {
+            player.MediaFailed -= OnMediaFailed;
+            try
+            {
+                player.Pause();
+                player.Source = null;
+            }
+            catch (Exception)
+            {
+                // already torn down
+            }
+            player.Dispose();
+        }
+        media?.Dispose();
+    }
+
+    private static void Log(Exception? ex, string message)
+    {
+        try
+        {
+            LumaServices.Get<ILogger<VideoPreviewHost>>().LogError(ex, "{Message}", message);
+        }
+        catch (InvalidOperationException)
+        {
+            // logging unavailable
+        }
     }
 }

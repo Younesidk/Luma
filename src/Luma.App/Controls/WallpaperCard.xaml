@@ -1,0 +1,126 @@
+<UserControl
+    x:Class="Luma.App.Controls.WallpaperCard"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:c="using:Luma.App.Controls"
+    IsTabStop="False">
+
+  <!-- DataContext: WallpaperItemViewModel (exposed as ViewModel for x:Bind). Size is set by the owning grid. -->
+  <Button x:Name="Card"
+          Style="{StaticResource CardButtonStyle}"
+          Command="{x:Bind ViewModel.OpenCommand, Mode=OneWay}"
+          AutomationProperties.Name="{x:Bind ViewModel.Title, Mode=OneWay}"
+          ToolTipService.ToolTip="{x:Bind ViewModel.Title, Mode=OneWay}">
+    <Button.ContextFlyout>
+      <MenuFlyout>
+        <MenuFlyoutItem Text="Open preview" Command="{x:Bind ViewModel.OpenCommand, Mode=OneWay}" />
+        <MenuFlyoutItem Text="Set as wallpaper" Command="{x:Bind ViewModel.ApplyCommand, Mode=OneWay}" />
+        <MenuFlyoutItem Text="Download" Command="{x:Bind ViewModel.DownloadCommand, Mode=OneWay}"
+                        IsEnabled="{x:Bind ViewModel.CanDownload, Mode=OneWay, FallbackValue=False}" />
+        <MenuFlyoutSeparator />
+        <MenuFlyoutItem Text="Add or remove favorite" Command="{x:Bind ViewModel.ToggleFavoriteCommand, Mode=OneWay}" />
+        <MenuFlyoutItem Text="Add to collection…" Command="{x:Bind ViewModel.AddToCollectionCommand, Mode=OneWay}" />
+        <MenuFlyoutItem Text="{x:Bind ViewModel.RemoveLabel, Mode=OneWay}" Command="{x:Bind ViewModel.RemoveCommand, Mode=OneWay}"
+                        Visibility="{x:Bind ViewModel.CanRemove, Mode=OneWay, FallbackValue=Collapsed}" />
+        <MenuFlyoutSeparator />
+        <MenuFlyoutItem Text="Open source page" Command="{x:Bind ViewModel.OpenSourceCommand, Mode=OneWay}" />
+      </MenuFlyout>
+    </Button.ContextFlyout>
+
+    <Grid x:Name="Surface">
+      <c:ThumbnailImage x:Name="Thumb"
+                        Source="{x:Bind ViewModel.ThumbnailSource, Mode=OneWay}"
+                        FallbackSource="{x:Bind ViewModel.ThumbnailFallbackSource, Mode=OneWay}"
+                        DecodeWidth="420" />
+
+      <!-- Failed to load -->
+      <StackPanel Visibility="{x:Bind Thumb.IsFailed, Mode=OneWay}" HorizontalAlignment="Center" VerticalAlignment="Center"
+                  Spacing="6" Opacity="0.7" IsHitTestVisible="False">
+        <c:LucideIcon Data="{StaticResource Icon.Image}" Size="26" Foreground="{ThemeResource LumaTextTertiaryBrush}" HorizontalAlignment="Center" />
+        <TextBlock Text="Preview unavailable" Style="{StaticResource MetaTextStyle}" HorizontalAlignment="Center" />
+      </StackPanel>
+
+      <!-- Readability scrims (revealed on hover / focus) -->
+      <Border VerticalAlignment="Bottom" Height="96" IsHitTestVisible="False" Opacity="{x:Bind RevealOpacity(IsRevealed), Mode=OneWay}">
+        <Border.OpacityTransition>
+          <ScalarTransition Duration="0:0:0.16" />
+        </Border.OpacityTransition>
+        <Border.Background>
+          <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+            <GradientStop Color="#00000000" Offset="0" />
+            <GradientStop Color="#CC05070C" Offset="1" />
+          </LinearGradientBrush>
+        </Border.Background>
+      </Border>
+      <Border VerticalAlignment="Top" Height="64" IsHitTestVisible="False" Opacity="{x:Bind RevealOpacity(IsRevealed), Mode=OneWay}">
+        <Border.OpacityTransition>
+          <ScalarTransition Duration="0:0:0.16" />
+        </Border.OpacityTransition>
+        <Border.Background>
+          <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+            <GradientStop Color="#8005070C" Offset="0" />
+            <GradientStop Color="#00000000" Offset="1" />
+          </LinearGradientBrush>
+        </Border.Background>
+      </Border>
+
+      <!-- Info, bottom-left -->
+      <StackPanel VerticalAlignment="Bottom" HorizontalAlignment="Left" Margin="14,0,0,12" Spacing="2" IsHitTestVisible="False"
+                  Opacity="{x:Bind RevealOpacity(IsRevealed), Mode=OneWay}">
+        <StackPanel.OpacityTransition>
+          <ScalarTransition Duration="0:0:0.16" />
+        </StackPanel.OpacityTransition>
+        <TextBlock Text="{x:Bind ViewModel.ProviderName, Mode=OneWay}" FontSize="11" FontWeight="Medium" Foreground="#B8F3F3FA" />
+        <TextBlock Text="{x:Bind ViewModel.ShortResolutionText, Mode=OneWay}" FontSize="13" FontWeight="SemiBold" Foreground="#FFFFFF"
+                   Visibility="{x:Bind ViewModel.HasResolution, Mode=OneWay, FallbackValue=Collapsed}" />
+      </StackPanel>
+
+      <!-- Actions, bottom-right -->
+      <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Bottom" HorizontalAlignment="Right" Margin="0,0,10,10"
+                  Opacity="{x:Bind RevealOpacity(IsRevealed), Mode=OneWay}"
+                  IsHitTestVisible="{x:Bind IsRevealed, Mode=OneWay}">
+        <StackPanel.OpacityTransition>
+          <ScalarTransition Duration="0:0:0.16" />
+        </StackPanel.OpacityTransition>
+        <Button Style="{StaticResource GlassButtonStyle}" Command="{x:Bind ViewModel.DownloadCommand, Mode=OneWay}"
+                IsEnabled="{x:Bind ViewModel.CanDownload, Mode=OneWay, FallbackValue=False}"
+                ToolTipService.ToolTip="Download" AutomationProperties.Name="Download wallpaper">
+          <c:LucideIcon Data="{StaticResource Icon.Download}" Size="16" />
+        </Button>
+        <Button Style="{StaticResource GlassButtonStyle}" Command="{x:Bind ViewModel.ApplyCommand, Mode=OneWay}"
+                ToolTipService.ToolTip="Set as wallpaper" AutomationProperties.Name="Set as wallpaper">
+          <c:LucideIcon Data="{StaticResource Icon.Monitor}" Size="16" />
+        </Button>
+      </StackPanel>
+
+      <!-- Favorite, top-right: revealed on hover/focus, always shown (pink, filled) while favorited -->
+      <Button x:Name="HeartButton" Style="{StaticResource GlassButtonStyle}"
+              Command="{x:Bind ViewModel.ToggleFavoriteCommand, Mode=OneWay}"
+              Foreground="{x:Bind HeartBrush(ViewModel.IsFavorite), Mode=OneWay}"
+              Opacity="{x:Bind HeartOpacity(ViewModel.IsFavorite, IsRevealed), Mode=OneWay}"
+              HorizontalAlignment="Right" VerticalAlignment="Top" Margin="10,10,10,0"
+              ToolTipService.ToolTip="Favorite" AutomationProperties.Name="Toggle favorite">
+        <Button.OpacityTransition>
+          <ScalarTransition Duration="0:0:0.16" />
+        </Button.OpacityTransition>
+        <c:LucideIcon Data="{StaticResource Icon.Heart}" Size="16" IsFilled="{x:Bind ViewModel.IsFavorite, Mode=OneWay, FallbackValue=False}" />
+      </Button>
+
+      <!-- Downloaded badge, top-left -->
+      <Border Visibility="{x:Bind ViewModel.IsDownloaded, Mode=OneWay, FallbackValue=Collapsed}"
+              HorizontalAlignment="Left" VerticalAlignment="Top" Margin="10,10,0,0"
+              Background="#8C0B0D16" CornerRadius="12" Padding="8,4" ToolTipService.ToolTip="In your library">
+        <StackPanel Orientation="Horizontal" Spacing="5">
+          <c:LucideIcon Data="{StaticResource Icon.Check}" Size="12" Foreground="{ThemeResource LumaSuccessBrush}" VerticalAlignment="Center" />
+          <TextBlock Text="Saved" FontSize="11" FontWeight="Medium" Foreground="#F3F3FA" VerticalAlignment="Center" />
+        </StackPanel>
+      </Border>
+
+      <!-- Download progress -->
+      <ProgressBar Visibility="{x:Bind ViewModel.IsDownloading, Mode=OneWay, FallbackValue=Collapsed}"
+                   Minimum="0" Maximum="1" Value="{x:Bind ViewModel.DownloadProgress, Mode=OneWay, FallbackValue=0}"
+                   VerticalAlignment="Bottom" Height="3" MinHeight="3" CornerRadius="0"
+                   Foreground="{ThemeResource LumaAccentBrush}" Background="#40000000" IsHitTestVisible="False" />
+    </Grid>
+  </Button>
+</UserControl>

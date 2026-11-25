@@ -1,5 +1,4 @@
 using System.Collections.ObjectModel;
-using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Luma.App.Services;
@@ -57,6 +56,7 @@ public sealed partial class VideoItemViewModel(VideoWallpaper video, LiveWallpap
 /// </summary>
 public sealed partial class LiveWallpapersViewModel : PageViewModel
 {
+    private readonly IUiDispatcher _dispatcher;
     private readonly IVideoLibrary _library;
     private readonly IVideoWallpaperService _video;
     private readonly ISettingsService _settings;
@@ -69,8 +69,9 @@ public sealed partial class LiveWallpapersViewModel : PageViewModel
     private bool _active;
 
     public LiveWallpapersViewModel(IVideoLibrary library, IVideoWallpaperService video, ISettingsService settings, IFileDialogService files,
-        IToastService toasts, IDialogService dialogs, IShellLauncher shell, ShellStartup startup, ILogger<LiveWallpapersViewModel> logger)
+        IToastService toasts, IDialogService dialogs, IShellLauncher shell, ShellStartup startup, IUiDispatcher dispatcher, ILogger<LiveWallpapersViewModel> logger)
     {
+        _dispatcher = dispatcher;
         _library = library;
         _video = video;
         _settings = settings;
@@ -89,8 +90,8 @@ public sealed partial class LiveWallpapersViewModel : PageViewModel
         }, m)).ToList();
 
         _status = video.Status;
-        video.StatusChanged += (_, status) => Dispatcher.UIThread.Post(() => ApplyStatus(status));
-        library.Changed += (_, _) => Dispatcher.UIThread.Post(() =>
+        video.StatusChanged += (_, status) => _dispatcher.Post(() => ApplyStatus(status));
+        library.Changed += (_, _) => _dispatcher.Post(() =>
         {
             if (_active) _ = ReloadAsync();
         });

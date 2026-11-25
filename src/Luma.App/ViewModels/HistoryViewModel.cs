@@ -1,5 +1,4 @@
 using System.Collections.ObjectModel;
-using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Luma.App.Services;
@@ -51,6 +50,7 @@ public sealed partial class HistoryEntryViewModel : ObservableObject
 
 public sealed partial class HistoryViewModel : PageViewModel
 {
+    private readonly IUiDispatcher _dispatcher;
     private readonly IHistoryService _history;
     private readonly WallpaperActions _actions;
     private readonly WallpaperItemFactory _factory;
@@ -64,8 +64,9 @@ public sealed partial class HistoryViewModel : PageViewModel
     private bool _active;
 
     public HistoryViewModel(IHistoryService history, WallpaperActions actions, WallpaperItemFactory factory, IProviderRegistry providers,
-        IDialogService dialogs, IDownloadLibrary library, INavigationService navigation, ShellStartup startup, ILogger<HistoryViewModel> logger)
+        IDialogService dialogs, IDownloadLibrary library, INavigationService navigation, ShellStartup startup, IUiDispatcher dispatcher, ILogger<HistoryViewModel> logger)
     {
+        _dispatcher = dispatcher;
         _history = history;
         _actions = actions;
         _factory = factory;
@@ -75,7 +76,7 @@ public sealed partial class HistoryViewModel : PageViewModel
         _navigation = navigation;
         _startup = startup;
         _logger = logger;
-        history.Changed += (_, _) => Dispatcher.UIThread.Post(() =>
+        history.Changed += (_, _) => _dispatcher.Post(() =>
         {
             if (_active) _ = ReloadAsync();
         });

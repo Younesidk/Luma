@@ -3,7 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 namespace Luma.App.Services;
 
 /// <summary>
-/// Narrow service-locator used only by custom controls that Avalonia constructs from XAML (they cannot receive
+/// Narrow service-locator used only by custom controls that the XAML framework constructs (they cannot receive
 /// constructor injection). View models and services always use normal dependency injection.
 /// </summary>
 public static class LumaServices

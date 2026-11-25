@@ -46,6 +46,7 @@ public sealed partial class DiscoverViewModel : PageViewModel
     private static readonly TimeSpan SearchDebounce = TimeSpan.FromMilliseconds(450);
     private static readonly TimeSpan FilterDebounce = TimeSpan.FromMilliseconds(250);
 
+    private readonly IUiDispatcher _dispatcher;
     private readonly IProviderRegistry _providers;
     private readonly ISettingsService _settings;
     private readonly WallpaperItemFactory _factory;
@@ -62,8 +63,9 @@ public sealed partial class DiscoverViewModel : PageViewModel
     private string? _seed;
 
     public DiscoverViewModel(IProviderRegistry providers, ISettingsService settings, WallpaperItemFactory factory, ShellStartup startup,
-        ILogger<DiscoverViewModel> logger)
+        IUiDispatcher dispatcher, ILogger<DiscoverViewModel> logger)
     {
+        _dispatcher = dispatcher;
         _providers = providers;
         _settings = settings;
         _factory = factory;
@@ -76,7 +78,7 @@ public sealed partial class DiscoverViewModel : PageViewModel
             RefreshCapabilityFlags();
             ScheduleRefresh(FilterDebounce);
         };
-        _settings.Changed += (_, _) => Avalonia.Threading.Dispatcher.UIThread.Post(OnSettingsChanged);
+        _settings.Changed += (_, _) => _dispatcher.Post(OnSettingsChanged);
         RebuildSources();
         _selectedSource = Sources[0];
         RefreshCapabilityFlags();

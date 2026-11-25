@@ -43,3 +43,13 @@ public interface IPreviewService
 
     void Close();
 }
+
+/// <summary>Marshals work onto the UI thread. View models and services use this instead of a UI framework's dispatcher.</summary>
+public interface IUiDispatcher
+{
+    /// <summary>Queues <paramref name="action"/> to run on the UI thread and returns immediately.</summary>
+    void Post(Action action);
+
+    /// <summary>Runs <paramref name="action"/> on the UI thread (inline when already on it) and completes when it has run.</summary>
+    Task InvokeAsync(Action action);
+}

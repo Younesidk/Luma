@@ -1,0 +1,37 @@
+<UserControl
+    x:Class="Luma.App.Views.CollectionEditDialogView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:v="using:Luma.App.Views"
+    IsTabStop="False">
+
+  <!-- ViewModel: CollectionEditDialogViewModel (create / rename a collection). -->
+  <Border Style="{StaticResource PopupBorderStyle}" Width="460" Padding="28" CornerRadius="20" Background="{ThemeResource LumaDialogBrush}"
+          Translation="0,0,40">
+    <Border.Shadow>
+      <ThemeShadow />
+    </Border.Shadow>
+    <StackPanel Spacing="20">
+      <TextBlock Text="{x:Bind ViewModel.Title}" FontSize="18" FontWeight="SemiBold" />
+      <StackPanel Spacing="14">
+        <StackPanel Spacing="6">
+          <TextBlock Text="Name" Style="{StaticResource MetaTextStyle}" />
+          <TextBox x:Name="NameBox" Text="{x:Bind ViewModel.Name, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                   PlaceholderText="Dark wallpapers, Desk setup, Anime…" MaxLength="120"
+                   KeyDown="OnNameKeyDown" AutomationProperties.Name="Collection name" />
+        </StackPanel>
+        <StackPanel Spacing="6">
+          <TextBlock Text="Description (optional)" Style="{StaticResource MetaTextStyle}" />
+          <TextBox Text="{x:Bind ViewModel.Description, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" AcceptsReturn="True" TextWrapping="Wrap"
+                   Height="84" MaxLength="500" PlaceholderText="What belongs in this collection?" AutomationProperties.Name="Collection description" />
+        </StackPanel>
+        <TextBlock Text="{x:Bind ViewModel.Error, Mode=OneWay}" Foreground="{ThemeResource LumaErrorBrush}" TextWrapping="Wrap"
+                   Visibility="{x:Bind v:BindHelpers.VisibleIfNotEmpty(ViewModel.Error), Mode=OneWay}" />
+      </StackPanel>
+      <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="10">
+        <Button Style="{StaticResource SecondaryButtonStyle}" Content="Cancel" Command="{x:Bind ViewModel.CancelDialogCommand}" />
+        <Button Style="{StaticResource PrimaryButtonStyle}" Content="{x:Bind ViewModel.ConfirmText}" Command="{x:Bind ViewModel.ConfirmCommand}" />
+      </StackPanel>
+    </StackPanel>
+  </Border>
+</UserControl>

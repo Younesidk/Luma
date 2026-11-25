@@ -15,7 +15,7 @@ Luma is a lightweight, **local live wallpaper engine** and wallpaper manager for
   in full quality, download them, organise them into collections, keep favourites, rotate them automatically and apply
   them straight to your desktop. The providers supply pictures only; live wallpapers always come from your own videos.
 
-It is a native desktop application built with C#, .NET 11 and Avalonia UI: no Electron, no browser wrapper, no backend
+It is a native desktop application built with C#, .NET 11 and WinUI 3 (Windows App SDK): no Electron, no browser wrapper, no backend
 server.
 
 ![Live wallpapers](docs/screenshots/live.png)
@@ -43,8 +43,8 @@ server.
 - **Preview**: shows the cached thumbnail instantly, then one larger image (decoded to at most 2400 px); details
   (uploader, tags, palette) are fetched from the provider, license and attribution are shown where required.
   `←` / `→` move through the gallery, `Esc` closes.
-- **Apply wallpapers** on Windows (all six fit modes) and on Linux (GNOME, Cinnamon, MATE, KDE Plasma, XFCE, Sway, or
-  any X11 session with `feh`). macOS reports honestly that it is not supported.
+- **Apply wallpapers** on Windows (all six fit modes). The infrastructure layer also has Linux appliers (GNOME, Cinnamon,
+  MATE, KDE Plasma, XFCE, Sway, `feh`), but the WinUI 3 app itself runs on Windows only.
 - **Downloads and local library**: bounded concurrent downloads with progress and cancel, validation of the received
   file (real image header check, never trusting the Content-Type), duplicate detection (by wallpaper and by content
   hash), safe file names, disk-full and permission errors explained in plain language, importing existing images,
@@ -78,7 +78,7 @@ server.
 | Area | Choice |
 |---|---|
 | Runtime / language | .NET 11 (SDK 11.0.100), C# |
-| UI | Avalonia 12.1.6 (Fluent theme as a base, custom design tokens, Inter font, Lucide-style icons) |
+| UI | WinUI 3 / Windows App SDK 2.7, unpackaged and self-contained (Fluent controls as a base, custom design tokens, Lucide-style stroke icons), H.NotifyIcon tray icon |
 | MVVM | CommunityToolkit.Mvvm 8.4 |
 | Data | SQLite + EF Core 11 with migrations |
 | HTTP | `IHttpClientFactory` named clients |
@@ -90,9 +90,9 @@ server.
 
 ```
 src/
-  Luma.Core/            Models, enums, interfaces, pure logic (no Avalonia, no I/O frameworks)
+  Luma.Core/            Models, enums, interfaces, pure logic (no UI framework, no I/O frameworks)
   Luma.Infrastructure/  EF Core, repositories/services, providers, downloads, thumbnail cache, platform adapters
-  Luma.App/             Avalonia views, view models, controls, styles, app services
+  Luma.App/             WinUI 3 views, view models, controls, styles, app services
   Luma.Tests/           Unit, integration and fake-based platform tests
 ```
 
@@ -113,7 +113,7 @@ src/
 ## Prerequisites
 
 - **.NET 11 SDK** (11.0.100 or newer). `global.json` pins the SDK feature band.
-- Windows 10/11 or a Linux desktop. Nothing else: no database server, no Node.js.
+- Windows 10 (version 2004 / build 19041 or later) or Windows 11, x64. Nothing else: no database server, no Node.js.
 
 ## Build, run, test
 
@@ -124,14 +124,15 @@ dotnet test -c Release
 dotnet run -c Release --project src/Luma.App
 ```
 
-Create a distributable build (framework-dependent, needs the .NET 11 runtime on the target machine):
+Create a distributable build (self-contained: the .NET runtime and the Windows App SDK runtime are bundled, so it runs
+on any Windows 10 19041+ / Windows 11 x64 machine with nothing installed):
 
 ```powershell
 ./scripts/publish.ps1            # -> artifacts/Luma-win-x64/Luma.exe
-./scripts/publish.ps1 -Runtime linux-x64
 ```
 
-Use `-SelfContained` to bundle the runtime.
+The script wipes the output folder first and fails if the result is incomplete (for example without `Luma.pri`, the
+compiled XAML that an unpackaged WinUI app needs at start-up).
 
 ### Windows installer (Velopack)
 
@@ -159,7 +160,7 @@ in `Releases/` (git-ignored):
 
 The installer is per-user: it installs into `%LocalAppData%\Luma.Desktop`, creates Start menu and desktop shortcuts
 named **Luma** with Luma's icon, and registers an uninstaller under *Settings → Apps*. Options: `-ReleaseNotes <file.md>`
-(defaults to `release-notes/<version>.md`), `-SkipDelta`, `-Runtime linux-x64` (run on Linux; produces an AppImage).
+(defaults to `release-notes/<version>.md`), `-SkipDelta`, `-OutputDir <folder>`. Windows only (WinUI 3).
 
 > **Why `Luma.Desktop` and not `Luma`?** Velopack installs into `%LocalAppData%\<packId>` and deletes that folder on
 > uninstall. Luma's *data* lives in `%LocalAppData%\Luma`, so the pack id must be different; the script refuses
@@ -349,7 +350,7 @@ Workshop (would require scraping). Luma uses official APIs only.
 ## Wallpaper application engine
 
 `IWallpaperApplier` applies an image file that already exists on disk. `WallpaperApplyService` downloads first when
-needed, validates the path, converts formats Windows cannot use (WebP/GIF → PNG via Avalonia), applies, and records
+needed, validates the path, converts formats Windows cannot use (WebP/GIF → PNG via Windows Imaging Component), applies, and records
 history only on success.
 
 - **Windows**: writes the documented `WallpaperStyle` / `TileWallpaper` values and calls `SystemParametersInfo(SPI_SETDESKWALLPAPER)`
@@ -385,7 +386,7 @@ Windows 8. Two layouts exist and both are handled:
   become its children.
 
 The output windows return `HTTRANSPARENT` and never activate, so icons, the desktop context menu, the taskbar and all
-normal windows behave as before. They live on a dedicated message-loop thread, never on Avalonia's UI thread, because a
+normal windows behave as before. They live on a dedicated message-loop thread, never on the WinUI UI thread, because a
 child window of Explorer's desktop shares input processing with Explorer. A hidden top-level window on that thread
 receives `TaskbarCreated` (Explorer restarted), display changes, power-source / display-power / sleep notifications and
 session lock. If Explorer destroys the desktop, Luma notices its windows being destroyed and rebuilds them as soon as the
@@ -518,7 +519,8 @@ Start-up shows the window first; the database opens afterwards and Discover only
 ## Known limitations
 
 - Rotation only runs while Luma is running (no background service or start-up registration).
-- Applying wallpapers is verified on Windows. Linux support is implemented and unit-tested with fakes only.
+- The app is Windows-only since the move to WinUI 3. The Linux appliers in `Luma.Infrastructure` are kept and
+  unit-tested with fakes, but no Linux front end ships.
 - Openverse anonymous access is limited (see above) and some Openverse thumbnails are unavailable.
 - Wallhaven's API does not provide wallpaper titles, so untitled wallpapers are shown as "Wallhaven *id*".
 - "Default image format" is intentionally not offered: wallpapers are saved exactly as provided (no re-encoding).

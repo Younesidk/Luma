@@ -81,7 +81,7 @@ jobs:
       - name: Test (Release)
         run: dotnet test Luma.sln -c Release --no-build --logger "console;verbosity=normal"
 
-      - name: Package with Velopack (existing script)
+      - name: Package with Velopack (unpackaged WinUI 3, self-contained win-x64)
         shell: pwsh
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}   # lets vpk download the previous release for delta generation
@@ -94,6 +94,8 @@ jobs:
           $required = @("Luma.Desktop-win-Setup.exe", "Luma.Desktop-$v-full.nupkg", "releases.win.json", "assets.win.json")
           $missing = $required | Where-Object { -not (Test-Path "Releases/$_") }
           if ($missing) { throw "Missing release files: $($missing -join ', ')" }
+          # The packaged app must carry its compiled XAML; publish.ps1 checks this too, this guards the package itself.
+          if (-not (Test-Path "artifacts/Luma-win-x64/Luma.pri")) { throw "artifacts/Luma-win-x64/Luma.pri is missing: the installed app could not load its UI." }
           if (-not (Test-Path "Releases/Luma.Desktop-$v-delta.nupkg")) {
             Write-Host "::notice::No delta package (normal for the first release); installed copies will use the full package."
           }

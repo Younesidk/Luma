@@ -1,0 +1,42 @@
+<UserControl
+    x:Class="Luma.App.Views.FeaturedHero"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:c="using:Luma.App.Controls"
+    IsTabStop="False">
+
+  <!-- ViewModel: DiscoverViewModel (set by DiscoverView). Height follows the window height (220–300px). -->
+  <Grid x:Name="Card" Height="300" CornerRadius="22" Background="{ThemeResource LumaSkeletonBrush}">
+    <c:ThumbnailImage Source="{x:Bind ViewModel.FeaturedImageSource, Mode=OneWay}" DecodeWidth="1500" CornerRadius="22" />
+    <Border CornerRadius="22" IsHitTestVisible="False">
+      <Border.Background>
+        <LinearGradientBrush StartPoint="0,0.5" EndPoint="1,0.5">
+          <GradientStop Color="#E605070C" Offset="0" />
+          <GradientStop Color="#8005070C" Offset="0.45" />
+          <GradientStop Color="#00000000" Offset="0.85" />
+        </LinearGradientBrush>
+      </Border.Background>
+    </Border>
+    <StackPanel VerticalAlignment="Bottom" HorizontalAlignment="Left" Margin="36,0,36,34" Spacing="10" MaxWidth="520">
+      <Border Background="#33FFFFFF" CornerRadius="12" Padding="11,4" HorizontalAlignment="Left">
+        <TextBlock Text="Featured" FontSize="11" FontWeight="SemiBold" Foreground="#F3F3FA" />
+      </Border>
+      <TextBlock Text="{x:Bind ViewModel.FeaturedHeading, Mode=OneWay}" FontSize="30" FontWeight="SemiBold" CharacterSpacing="-20" Foreground="#FFFFFF"
+                 TextWrapping="Wrap" MaxLines="2" TextTrimming="CharacterEllipsis" />
+      <TextBlock Text="{x:Bind ViewModel.FeaturedDetail, Mode=OneWay}" FontSize="13" Foreground="#CCF3F3FA" />
+      <StackPanel Orientation="Horizontal" Spacing="10" Margin="0,8,0,0">
+        <Button Style="{StaticResource PrimaryButtonStyle}" Command="{x:Bind ViewModel.Featured.OpenCommand, Mode=OneWay}" Height="42">
+          <StackPanel Orientation="Horizontal" Spacing="8">
+            <c:LucideIcon Data="{StaticResource Icon.Play}" Size="14" IsFilled="True" VerticalAlignment="Center" />
+            <TextBlock Text="View wallpaper" VerticalAlignment="Center" />
+          </StackPanel>
+        </Button>
+        <Button Style="{StaticResource GlassButtonStyle}" Width="42" Height="42" CornerRadius="21"
+                Command="{x:Bind ViewModel.Featured.ToggleFavoriteCommand, Mode=OneWay}"
+                ToolTipService.ToolTip="Favorite" AutomationProperties.Name="Toggle favorite">
+          <c:LucideIcon Data="{StaticResource Icon.Heart}" Size="17" IsFilled="{x:Bind ViewModel.Featured.IsFavorite, Mode=OneWay, FallbackValue=False}" />
+        </Button>
+      </StackPanel>
+    </StackPanel>
+  </Grid>
+</UserControl>

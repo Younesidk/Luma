@@ -1,8 +1,6 @@
 ﻿using System.Collections.ObjectModel;
 using System.Reflection;
 using System.Runtime.CompilerServices;
-using Avalonia.Media;
-using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Luma.App.Services;
@@ -19,7 +17,12 @@ public sealed partial class AccentSwatchViewModel(AccentPreset preset, Action<Ac
 {
     public AccentPreset Preset { get; } = preset;
     public string Name => Preset.Name;
-    public IBrush Brush { get; } = new SolidColorBrush(preset.Dark);
+    public Windows.UI.Color Color => Preset.Dark;
+
+    private Microsoft.UI.Xaml.Media.SolidColorBrush? _brush;
+
+    /// <summary>Swatch fill (the dark-theme accent). Created lazily so the view model can be built off the UI thread.</summary>
+    public Microsoft.UI.Xaml.Media.SolidColorBrush Brush => _brush ??= new Microsoft.UI.Xaml.Media.SolidColorBrush(Preset.Dark);
 
     [ObservableProperty]
     private bool _isSelected;
@@ -106,6 +109,7 @@ public sealed partial class SettingsViewModel : PageViewModel
         [ThemePreference.Light] = "Light"
     };
 
+    private readonly IUiDispatcher _dispatcher;
     private readonly ISettingsService _settings;
     private readonly ThemeService _theme;
     private readonly IProviderRegistry _providers;
@@ -127,8 +131,9 @@ public sealed partial class SettingsViewModel : PageViewModel
     public SettingsViewModel(ISettingsService settings, ThemeService theme, IProviderRegistry providers, IImageFetcher fetcher,
         ImageLoader imageLoader, ICollectionService collections, IRotationService rotation, IShellLauncher shell, ILumaPaths paths,
         IFileDialogService files, IDialogService dialogs, IToastService toasts, IWallpaperApplyService apply, ShellStartup startup,
-        UpdateViewModel updates, IVideoWallpaperService video, IVideoLibrary videoLibrary, ILogger<SettingsViewModel> logger)
+        UpdateViewModel updates, IVideoWallpaperService video, IVideoLibrary videoLibrary, IUiDispatcher dispatcher, ILogger<SettingsViewModel> logger)
     {
+        _dispatcher = dispatcher;
         _settings = settings;
         _theme = theme;
         _providers = providers;
@@ -176,7 +181,7 @@ public sealed partial class SettingsViewModel : PageViewModel
         RebuildSourceOptions();
 
         Version = typeof(SettingsViewModel).Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion.Split('+')[0] ?? "1.0.0";
-        _rotation.Rotated += (_, _) => Dispatcher.UIThread.Post(RefreshRotationText);
+        _rotation.Rotated += (_, _) => _dispatcher.Post(RefreshRotationText);
     }
 
     public override string Title => "Settings";

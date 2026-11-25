@@ -1,5 +1,4 @@
 using System.Collections.ObjectModel;
-using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Luma.App.Services;
@@ -16,9 +15,11 @@ namespace Luma.App.ViewModels;
 public sealed partial class DownloadJobViewModel : ObservableObject
 {
     private readonly DownloadJob _job;
+    private readonly IUiDispatcher _dispatcher;
 
-    public DownloadJobViewModel(DownloadJob job)
+    public DownloadJobViewModel(DownloadJob job, IUiDispatcher dispatcher)
     {
+        _dispatcher = dispatcher;
         _job = job;
         job.Changed += OnChanged;
         Update();
@@ -35,7 +36,7 @@ public sealed partial class DownloadJobViewModel : ObservableObject
     [ObservableProperty] private bool _isDone;
     [ObservableProperty] private bool _isIndeterminate;
 
-    private void OnChanged(object? sender, EventArgs e) => Dispatcher.UIThread.Post(Update);
+    private void OnChanged(object? sender, EventArgs e) => _dispatcher.Post(Update);
 
     private void Update()
     {
@@ -112,6 +113,7 @@ public sealed partial class DownloadsViewModel : PageViewModel
         new("Resolution", LibrarySort.Resolution), new("File size", LibrarySort.FileSize)
     ];
 
+    private readonly IUiDispatcher _dispatcher;
     private readonly IDownloadService _downloads;
     private readonly IDownloadLibrary _library;
     private readonly WallpaperActions _actions;
@@ -129,8 +131,9 @@ public sealed partial class DownloadsViewModel : PageViewModel
 
     public DownloadsViewModel(IDownloadService downloads, IDownloadLibrary library, WallpaperActions actions, WallpaperItemFactory factory,
         IProviderRegistry providers, IFileDialogService files, IToastService toasts, INavigationService navigation, ShellStartup startup,
-        ILogger<DownloadsViewModel> logger)
+        IUiDispatcher dispatcher, ILogger<DownloadsViewModel> logger)
     {
+        _dispatcher = dispatcher;
         _downloads = downloads;
         _library = library;
         _actions = actions;
@@ -143,8 +146,8 @@ public sealed partial class DownloadsViewModel : PageViewModel
         _logger = logger;
         _selectedSort = SortChoices[0];
 
-        downloads.JobAdded += (_, job) => Dispatcher.UIThread.Post(() => AddJob(job));
-        library.Changed += (_, _) => Dispatcher.UIThread.Post(() =>
+        downloads.JobAdded += (_, job) => _dispatcher.Post(() => AddJob(job));
+        library.Changed += (_, _) => _dispatcher.Post(() =>
         {
             if (_active) _ = ReloadAsync();
         });
@@ -302,8 +305,8 @@ public sealed partial class DownloadsViewModel : PageViewModel
     private void AddJob(DownloadJob job)
     {
         if (Jobs.Any(j => ReferenceEquals(j.Wallpaper, job.Wallpaper))) return;
-        Jobs.Insert(0, new DownloadJobViewModel(job));
-        job.Changed += (_, _) => Dispatcher.UIThread.Post(NotifyJobs);
+        Jobs.Insert(0, new DownloadJobViewModel(job, _dispatcher));
+        job.Changed += (_, _) => _dispatcher.Post(NotifyJobs);
         NotifyJobs();
     }
 

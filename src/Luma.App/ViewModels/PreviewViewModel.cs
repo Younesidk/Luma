@@ -1,4 +1,3 @@
-using Avalonia.Media.Imaging;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Luma.App.Services;
@@ -87,7 +86,17 @@ public sealed partial class PreviewViewModel : ObservableObject, IDisposable
     private Wallpaper _details;
 
     [ObservableProperty]
-    private Bitmap? _image;
+    private Microsoft.UI.Xaml.Media.ImageSource? _image;
+
+    /// <summary>
+    /// Pixel size of the full-quality <see cref="Image"/> (0 while only the thumbnail shows). The view uses it to never
+    /// upscale small wallpapers past their real size.
+    /// </summary>
+    [ObservableProperty]
+    private int _imagePixelWidth;
+
+    [ObservableProperty]
+    private int _imagePixelHeight;
 
     [ObservableProperty]
     private bool _isLoadingImage;
@@ -221,7 +230,7 @@ public sealed partial class PreviewViewModel : ObservableObject, IDisposable
                     var lease = await _loader.AcquireThumbnailAsync(thumb, 420, ct);
                     if (ct.IsCancellationRequested) { lease.Dispose(); return; }
                     _thumbLease = lease;
-                    Image = lease.Bitmap;
+                    Image = lease.Source;
                 }
                 catch (Exception ex) when (ex is not OperationCanceledException)
                 {
@@ -241,11 +250,17 @@ public sealed partial class PreviewViewModel : ObservableObject, IDisposable
 
             IsRefiningImage = true;
             var width = Math.Min(item.Wallpaper.Resolution?.Width ?? 1920, MaxDecodeWidth);
-            var full = await _loader.AcquirePreviewAsync(source, Math.Max(640, width), ct);
+            var decodeWidth = Math.Max(640, width);
+            var full = await _loader.AcquirePreviewAsync(source, decodeWidth, ct);
             if (ct.IsCancellationRequested) { full.Dispose(); return; }
 
             _fullLease = full;
-            Image = full.Bitmap;
+            // Only an image that is natively smaller than requested is capped at its real size; a large one that was
+            // merely decoded down to the budget may still fill the stage.
+            var isNativeSize = full.PixelWidth < decodeWidth || item.Wallpaper.Resolution?.Width <= decodeWidth;
+            ImagePixelWidth = isNativeSize ? full.PixelWidth : 0;
+            ImagePixelHeight = isNativeSize ? full.PixelHeight : 0;
+            Image = full.Source;
             _thumbLease?.Dispose();
             _thumbLease = null;
         }
@@ -317,6 +332,8 @@ public sealed partial class PreviewViewModel : ObservableObject, IDisposable
     private void ReleaseImages()
     {
         Image = null;
+        ImagePixelWidth = 0;
+        ImagePixelHeight = 0;
         _thumbLease?.Dispose();
         _thumbLease = null;
         _fullLease?.Dispose();

@@ -1,5 +1,4 @@
 using System.Text;
-using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Luma.App.Services;
@@ -14,16 +13,18 @@ namespace Luma.App.ViewModels;
 /// </summary>
 public sealed partial class UpdateViewModel : ObservableObject
 {
+    private readonly IUiDispatcher _dispatcher;
     private readonly IUpdateService _updates;
     private readonly IToastService _toasts;
     private UpdateSnapshot _snapshot;
 
-    public UpdateViewModel(IUpdateService updates, IToastService toasts)
+    public UpdateViewModel(IUpdateService updates, IToastService toasts, IUiDispatcher dispatcher)
     {
+        _dispatcher = dispatcher;
         _updates = updates;
         _toasts = toasts;
         _snapshot = updates.Current;
-        updates.Changed += (_, snapshot) => Dispatcher.UIThread.Post(() => Apply(snapshot));
+        updates.Changed += (_, snapshot) => _dispatcher.Post(() => Apply(snapshot));
     }
 
     // ----- Card (main window) -----

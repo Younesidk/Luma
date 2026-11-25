@@ -1,4 +1,3 @@
-using Avalonia.Threading;
 using CommunityToolkit.Mvvm.Messaging;
 using Luma.Core.Interfaces;
 
@@ -10,13 +9,15 @@ namespace Luma.App.Services;
 /// </summary>
 public sealed class LibraryEventsBridge
 {
+    private readonly IUiDispatcher _dispatcher;
     private readonly IFavoritesService _favorites;
     private readonly IDownloadLibrary _library;
     private readonly IDownloadService _downloads;
     private bool _started;
 
-    public LibraryEventsBridge(IFavoritesService favorites, IDownloadLibrary library, IDownloadService downloads)
+    public LibraryEventsBridge(IFavoritesService favorites, IDownloadLibrary library, IDownloadService downloads, IUiDispatcher dispatcher)
     {
+        _dispatcher = dispatcher;
         _favorites = favorites;
         _library = library;
         _downloads = downloads;
@@ -28,14 +29,14 @@ public sealed class LibraryEventsBridge
         _started = true;
 
         _favorites.FavoriteChanged += (_, e) =>
-            Dispatcher.UIThread.Post(() => WeakReferenceMessenger.Default.Send(new FavoriteChangedMessage(e.Key, e.IsFavorite)));
+            _dispatcher.Post(() => WeakReferenceMessenger.Default.Send(new FavoriteChangedMessage(e.Key, e.IsFavorite)));
 
         _library.Changed += (_, e) =>
-            Dispatcher.UIThread.Post(() => WeakReferenceMessenger.Default.Send(new LibraryChangedMessage(e.WallpaperKey, e.IsDownloaded)));
+            _dispatcher.Post(() => WeakReferenceMessenger.Default.Send(new LibraryChangedMessage(e.WallpaperKey, e.IsDownloaded)));
 
         _downloads.JobAdded += (_, job) =>
         {
-            void Publish() => Dispatcher.UIThread.Post(() =>
+            void Publish() => _dispatcher.Post(() =>
                 WeakReferenceMessenger.Default.Send(new DownloadProgressMessage(job.Wallpaper.Key, job.Status, job.Progress)));
 
             job.Changed += (_, _) => Publish();

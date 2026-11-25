@@ -107,7 +107,7 @@ public class AppSupportTests
     {
         Assert.Equal(ThemeService.Presets.Count, ThemeService.Presets.Select(p => p.Id).Distinct().Count());
         var violet = Assert.Single(ThemeService.Presets, p => p.Id == "violet");
-        Assert.Equal(Avalonia.Media.Color.Parse("#8B7CFF"), violet.Dark);
+        Assert.Equal(Windows.UI.Color.FromArgb(0xFF, 0x8B, 0x7C, 0xFF), violet.Dark);
     }
 
     [Fact]

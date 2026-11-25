@@ -4,7 +4,7 @@
 
 .DESCRIPTION
   1. Reads the version from Directory.Build.props (the single version source).
-  2. Publishes Luma self-contained into artifacts/Luma-<runtime>.
+  2. Publishes Luma (unpackaged WinUI 3, .NET + Windows App SDK self-contained) into artifacts/Luma-<runtime>.
   3. Downloads the latest *published* GitHub release into Releases/ (so Velopack can build a delta package from it).
   4. Runs `vpk pack`, which writes into Releases/:
        Luma.Desktop-win-Setup.exe        installer for new machines
@@ -15,7 +15,7 @@
        Luma.Desktop-win-Portable.zip     portable build (optional to upload)
 
   vpk is pinned in dotnet-tools.json and restored automatically (`dotnet tool restore`).
-  Run on Windows for win-x64 and on Linux for linux-x64 (Velopack packages for the OS it runs on).
+  Windows only: Luma's UI is WinUI 3, so win-x64 is the only supported runtime.
 
 .PARAMETER ReleaseNotes
   Markdown file shown in Luma's update card. Defaults to release-notes/<version>.md when that file exists.
@@ -31,6 +31,7 @@
 .EXAMPLE  ./scripts/build-installer.ps1 -ReleaseNotes release-notes/1.1.0.md
 #>
 param(
+    [ValidateSet("win-x64")]
     [string]$Runtime = "win-x64",
     [string]$ReleaseNotes,
     [switch]$SkipDelta,
@@ -47,9 +48,9 @@ $root = Split-Path -Parent $PSScriptRoot
 $PackId = "Luma.Desktop"
 if ($PackId -ieq "Luma") { throw "PackId must not be 'Luma': it would share (and on uninstall delete) the user data folder." }
 
-$isWindowsTarget = $Runtime -like "win-*"
-$channel = if ($isWindowsTarget) { "win" } else { ($Runtime -split "-")[0] }
-$mainExe = if ($isWindowsTarget) { "Luma.exe" } else { "Luma" }
+if (-not $IsWindows -and $PSVersionTable.PSEdition -eq "Core") { throw "Luma (WinUI 3) can only be packaged on Windows." }
+$channel = "win"
+$mainExe = "Luma.exe"
 
 # --- version from Directory.Build.props ------------------------------------
 $props = [xml](Get-Content (Join-Path $root "Directory.Build.props"))
@@ -64,7 +65,7 @@ try {
     if ($LASTEXITCODE -ne 0) { throw "dotnet tool restore failed" }
 
     # --- publish -------------------------------------------------------------------
-    & (Join-Path $PSScriptRoot "publish.ps1") -Runtime $Runtime -SelfContained
+    & (Join-Path $PSScriptRoot "publish.ps1") -Runtime $Runtime
     if ($LASTEXITCODE -ne 0) { throw "publish failed" }
     $packDir = Join-Path $root "artifacts/Luma-$Runtime"
 
@@ -106,11 +107,10 @@ try {
         "--packAuthors", "Luma",
         "--channel", $channel,
         "--runtime", $Runtime,
-        "--outputDir", $releases
+        "--outputDir", $releases,
+        "--icon", (Join-Path $root "src/Luma.App/Assets/luma.ico"),
+        "--shortcuts", "Desktop,StartMenuRoot"
     )
-    if ($isWindowsTarget) {
-        $packArgs += @("--icon", (Join-Path $root "src/Luma.App/Assets/luma.ico"), "--shortcuts", "Desktop,StartMenuRoot")
-    }
     if ($ReleaseNotes) {
         Write-Host "Release notes: $ReleaseNotes"
         $packArgs += @("--releaseNotes", (Resolve-Path $ReleaseNotes).Path)

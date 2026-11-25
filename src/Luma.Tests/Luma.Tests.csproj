@@ -1,8 +1,14 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
+    <!-- Luma.App is a WinUI 3 app, so the tests that reference it target the same Windows TFM. -->
+    <TargetFramework>net11.0-windows10.0.19041.0</TargetFramework>
+    <TargetPlatformMinVersion>10.0.19041.0</TargetPlatformMinVersion>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
     <IsPackable>false</IsPackable>
     <IsTestProject>true</IsTestProject>
     <RootNamespace>Luma.Tests</RootNamespace>
+    <!-- AOT-only analyzer (as in Luma.App): collection expressions on read-only interfaces are fine under the JIT. -->
+    <NoWarn>$(NoWarn);CsWinRT1032</NoWarn>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\Luma.Core\Luma.Core.csproj" />

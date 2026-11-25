@@ -1,5 +1,4 @@
 using System.Collections.ObjectModel;
-using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Luma.Core.Exceptions;
@@ -226,12 +225,14 @@ public sealed partial class CollectionPickerDialogViewModel : DialogViewModel
 public sealed partial class DialogService : ObservableObject, IDialogService
 {
     private readonly SemaphoreSlim _gate = new(1, 1);
+    private readonly IUiDispatcher _dispatcher;
     private readonly ICollectionService _collections;
     private readonly IToastService _toasts;
     private readonly ILoggerFactory _loggerFactory;
 
-    public DialogService(ICollectionService collections, IToastService toasts, ILoggerFactory loggerFactory)
+    public DialogService(ICollectionService collections, IToastService toasts, IUiDispatcher dispatcher, ILoggerFactory loggerFactory)
     {
+        _dispatcher = dispatcher;
         _collections = collections;
         _toasts = toasts;
         _loggerFactory = loggerFactory;
@@ -268,12 +269,12 @@ public sealed partial class DialogService : ObservableObject, IDialogService
         await _gate.WaitAsync();
         try
         {
-            await Dispatcher.UIThread.InvokeAsync(() => Current = dialog);
+            await _dispatcher.InvokeAsync(() => Current = dialog);
             return await getResult(dialog);
         }
         finally
         {
-            await Dispatcher.UIThread.InvokeAsync(() => Current = null);
+            await _dispatcher.InvokeAsync(() => Current = null);
             _gate.Release();
         }
     }

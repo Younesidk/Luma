@@ -47,14 +47,16 @@ public sealed partial class ShellViewModel : ObservableObject
 {
     private readonly Dictionary<AppPage, PageViewModel> _pages;
     private readonly NavigationService _navigation;
+    private readonly IUiDispatcher _dispatcher;
     private readonly ISettingsService _settings;
     private PageViewModel? _activePage;
 
     public ShellViewModel(DiscoverViewModel discover, FavoritesViewModel favorites, CollectionsViewModel collections,
         DownloadsViewModel downloads, LiveWallpapersViewModel live, HistoryViewModel history, FeedbackViewModel feedback, SettingsViewModel settings, NavigationService navigation,
         PreviewService preview, DialogService dialogs, ToastService toasts, ISettingsService settingsService, ShellStartup startup,
-        UpdateViewModel updates)
+        UpdateViewModel updates, IUiDispatcher dispatcher)
     {
+        _dispatcher = dispatcher;
         Discover = discover;
         _navigation = navigation;
         _settings = settingsService;
@@ -111,7 +113,7 @@ public sealed partial class ShellViewModel : ObservableObject
             if (e.PropertyName == nameof(PreviewService.Current)) OnPropertyChanged(nameof(PreviewViewModel));
         };
         discover.PropertyChanged += OnDiscoverChanged;
-        settingsService.Changed += (_, s) => Avalonia.Threading.Dispatcher.UIThread.Post(() =>
+        settingsService.Changed += (_, s) => _dispatcher.Post(() =>
         {
             if (IsSidebarCompact != s.SidebarCompact) IsSidebarCompact = s.SidebarCompact;
         });

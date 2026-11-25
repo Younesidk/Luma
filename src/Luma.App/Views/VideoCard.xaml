@@ -1,0 +1,84 @@
+<UserControl
+    x:Class="Luma.App.Views.VideoCard"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:c="using:Luma.App.Controls"
+    IsTabStop="False">
+
+  <UserControl.Resources>
+    <Style x:Key="BadgeBorderStyle" TargetType="Border">
+      <Setter Property="Background" Value="#B30B0D16" />
+      <Setter Property="CornerRadius" Value="8" />
+      <Setter Property="Padding" Value="7,3" />
+    </Style>
+    <Style x:Key="BadgeTextStyle" TargetType="TextBlock">
+      <Setter Property="FontSize" Value="11" />
+      <Setter Property="FontWeight" Value="Medium" />
+      <Setter Property="Foreground" Value="#F3F3FA" />
+    </Style>
+  </UserControl.Resources>
+
+  <!-- DataContext / ViewModel: VideoItemViewModel. The active video gets a 2px accent border. -->
+  <Grid>
+  <Border Style="{StaticResource CardBorderStyle}">
+    <StackPanel>
+      <Button Style="{StaticResource CardButtonStyle}" Padding="0" CornerRadius="15,15,0,0" Command="{x:Bind ViewModel.PreviewCommand, Mode=OneWay}"
+              ToolTipService.ToolTip="Preview" AutomationProperties.Name="{x:Bind PreviewName(ViewModel.Title), Mode=OneWay}">
+        <Grid Height="163">
+          <c:ThumbnailImage Source="{x:Bind ViewModel.ThumbnailSource, Mode=OneWay}" DecodeWidth="480" CornerRadius="15,15,0,0" />
+          <Border Style="{StaticResource BadgeBorderStyle}" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="10">
+            <StackPanel Orientation="Horizontal" Spacing="5">
+              <c:LucideIcon Data="{StaticResource Icon.Film}" Size="12" Foreground="#F3F3FA" VerticalAlignment="Center" />
+              <TextBlock Text="Video" Style="{StaticResource BadgeTextStyle}" VerticalAlignment="Center" />
+            </StackPanel>
+          </Border>
+          <Border Style="{StaticResource BadgeBorderStyle}" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="10">
+            <TextBlock Text="{x:Bind ViewModel.DurationText, Mode=OneWay}" Style="{StaticResource BadgeTextStyle}" />
+          </Border>
+          <Border Style="{StaticResource BadgeBorderStyle}" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="10" Background="{ThemeResource LumaAccentBrush}"
+                  Visibility="{x:Bind ViewModel.IsActive, Mode=OneWay, FallbackValue=Collapsed}">
+            <TextBlock Text="On desktop" Style="{StaticResource BadgeTextStyle}" />
+          </Border>
+          <c:LucideIcon Data="{StaticResource Icon.Alert}" Size="24" Foreground="{ThemeResource LumaWarningBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"
+                        Visibility="{x:Bind ViewModel.FileMissing, Mode=OneWay, FallbackValue=Collapsed}" />
+        </Grid>
+      </Button>
+      <Grid Margin="14,10,8,12">
+        <Grid.ColumnDefinitions>
+          <ColumnDefinition Width="*" />
+          <ColumnDefinition Width="Auto" />
+        </Grid.ColumnDefinitions>
+        <StackPanel Spacing="3" VerticalAlignment="Center">
+          <TextBlock Text="{x:Bind ViewModel.Title, Mode=OneWay}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+          <TextBlock Text="{x:Bind ViewModel.MetaText, Mode=OneWay}" Style="{StaticResource MetaTextStyle}" TextTrimming="CharacterEllipsis"
+                     Visibility="{x:Bind ViewModel.FileExists, Mode=OneWay, FallbackValue=Collapsed}" />
+          <TextBlock Text="File missing — remove and import again" Style="{StaticResource MetaTextStyle}" Foreground="{ThemeResource LumaWarningBrush}"
+                     TextTrimming="CharacterEllipsis" Visibility="{x:Bind ViewModel.FileMissing, Mode=OneWay, FallbackValue=Collapsed}" />
+        </StackPanel>
+        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="2" VerticalAlignment="Center">
+          <Button Style="{StaticResource IconButtonStyle}" Command="{x:Bind ViewModel.ApplyCommand, Mode=OneWay}"
+                  IsEnabled="{x:Bind ViewModel.FileExists, Mode=OneWay, FallbackValue=False}"
+                  ToolTipService.ToolTip="Set as wallpaper" AutomationProperties.Name="Set as wallpaper">
+            <c:LucideIcon Data="{StaticResource Icon.Monitor}" Size="18" />
+          </Button>
+          <Button Style="{StaticResource IconButtonStyle}" ToolTipService.ToolTip="More" AutomationProperties.Name="More actions">
+            <c:LucideIcon Data="{StaticResource Icon.More}" Size="18" />
+            <Button.Flyout>
+              <MenuFlyout Placement="BottomEdgeAlignedRight">
+                <MenuFlyoutItem Text="Preview" Command="{x:Bind ViewModel.PreviewCommand, Mode=OneWay}"
+                                IsEnabled="{x:Bind ViewModel.FileExists, Mode=OneWay, FallbackValue=False}" />
+                <MenuFlyoutItem Text="Show in folder" Command="{x:Bind ViewModel.ShowInFolderCommand, Mode=OneWay}"
+                                IsEnabled="{x:Bind ViewModel.FileExists, Mode=OneWay, FallbackValue=False}" />
+                <MenuFlyoutItem Text="Remove…" Command="{x:Bind ViewModel.RemoveCommand, Mode=OneWay}" />
+              </MenuFlyout>
+            </Button.Flyout>
+          </Button>
+        </StackPanel>
+      </Grid>
+    </StackPanel>
+  </Border>
+  <!-- Accent ring drawn over the card (keeps following theme and accent changes). -->
+  <Border CornerRadius="16" BorderThickness="2" BorderBrush="{ThemeResource LumaAccentBrush}" IsHitTestVisible="False"
+          Visibility="{x:Bind ViewModel.IsActive, Mode=OneWay, FallbackValue=Collapsed}" />
+  </Grid>
+</UserControl>

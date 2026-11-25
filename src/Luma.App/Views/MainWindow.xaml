@@ -1,0 +1,250 @@
+<Window
+    x:Class="Luma.App.Views.MainWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:c="using:Luma.App.Controls"
+    xmlns:vm="using:Luma.App.ViewModels"
+    xmlns:svc="using:Luma.App.Services"
+    xmlns:v="using:Luma.App.Views"
+    Title="Luma">
+
+  <!-- Root: ThemeService sets RequestedTheme here; its Foreground is inherited by every TextBlock in the window. -->
+  <UserControl x:Name="Root" Foreground="{ThemeResource LumaTextPrimaryBrush}" IsTabStop="False">
+    <Grid x:Name="Shell" Background="{ThemeResource LumaBackgroundBrush}">
+      <Grid.Resources>
+        <Style x:Key="ToastBorderStyle" TargetType="Border">
+          <Setter Property="Background" Value="{ThemeResource LumaElevatedBrush}" />
+          <Setter Property="BorderBrush" Value="{ThemeResource LumaBorderBrush}" />
+          <Setter Property="BorderThickness" Value="1" />
+          <Setter Property="CornerRadius" Value="14" />
+        </Style>
+        <ThemeShadow x:Key="OverlayShadow" />
+      </Grid.Resources>
+
+      <Grid>
+        <Grid.ColumnDefinitions>
+          <ColumnDefinition Width="Auto" />
+          <ColumnDefinition Width="*" />
+        </Grid.ColumnDefinitions>
+
+        <!-- ===================== Sidebar ===================== -->
+        <Border Grid.Column="0" Width="{x:Bind ViewModel.SidebarWidth, Mode=OneWay}" Background="{ThemeResource LumaSidebarBrush}"
+                BorderBrush="{ThemeResource LumaBorderSubtleBrush}" BorderThickness="0,0,1,0">
+          <Grid>
+            <Grid.RowDefinitions>
+              <RowDefinition Height="Auto" />
+              <RowDefinition Height="*" />
+              <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+
+            <!-- Identity (inside the window's drag region) -->
+            <Border Grid.Row="0" Height="64" Background="Transparent">
+              <StackPanel Orientation="Horizontal" Spacing="12" Margin="22,0,0,0" VerticalAlignment="Center" IsHitTestVisible="False">
+                <Border x:Name="LogoBadge" Width="32" Height="32" CornerRadius="10" Background="{ThemeResource LumaAccentBrush}">
+                  <Grid>
+                    <Ellipse Width="16" Height="16" Stroke="White" StrokeThickness="2" Opacity="0.95" />
+                    <Ellipse Width="6" Height="6" Fill="White" />
+                  </Grid>
+                </Border>
+                <TextBlock Text="Luma" FontSize="19" FontWeight="SemiBold" CharacterSpacing="-16" VerticalAlignment="Center"
+                           Visibility="{x:Bind v:BindHelpers.Collapsed(ViewModel.IsSidebarCollapsed), Mode=OneWay}" />
+              </StackPanel>
+            </Border>
+
+            <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollMode="Disabled" Padding="14,6,14,0">
+              <StackPanel Spacing="22">
+                <StackPanel Spacing="3">
+                  <TextBlock Text="Library" Style="{StaticResource LabelTextStyle}" Margin="12,0,0,6"
+                             Visibility="{x:Bind v:BindHelpers.Collapsed(ViewModel.IsSidebarCollapsed), Mode=OneWay}" />
+                  <ItemsControl ItemsSource="{x:Bind ViewModel.LibraryItems}" IsTabStop="False">
+                    <ItemsControl.ItemsPanel><ItemsPanelTemplate><StackPanel Spacing="2" /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate><DataTemplate x:DataType="vm:NavItemViewModel"><v:NavButton /></DataTemplate></ItemsControl.ItemTemplate>
+                  </ItemsControl>
+                </StackPanel>
+                <StackPanel Spacing="3">
+                  <TextBlock Text="Sources" Style="{StaticResource LabelTextStyle}" Margin="12,0,0,6"
+                             Visibility="{x:Bind v:BindHelpers.Collapsed(ViewModel.IsSidebarCollapsed), Mode=OneWay}" />
+                  <Border Style="{StaticResource DividerBorderStyle}" Margin="12,0,12,6"
+                          Visibility="{x:Bind ViewModel.IsSidebarCollapsed, Mode=OneWay}" />
+                  <ItemsControl ItemsSource="{x:Bind ViewModel.SourceItems}" IsTabStop="False">
+                    <ItemsControl.ItemsPanel><ItemsPanelTemplate><StackPanel Spacing="2" /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate><DataTemplate x:DataType="vm:NavItemViewModel"><v:NavButton /></DataTemplate></ItemsControl.ItemTemplate>
+                  </ItemsControl>
+                </StackPanel>
+                <StackPanel Spacing="3">
+                  <TextBlock Text="System" Style="{StaticResource LabelTextStyle}" Margin="12,0,0,6"
+                             Visibility="{x:Bind v:BindHelpers.Collapsed(ViewModel.IsSidebarCollapsed), Mode=OneWay}" />
+                  <Border Style="{StaticResource DividerBorderStyle}" Margin="12,0,12,6"
+                          Visibility="{x:Bind ViewModel.IsSidebarCollapsed, Mode=OneWay}" />
+                  <ItemsControl ItemsSource="{x:Bind ViewModel.SystemItems}" IsTabStop="False">
+                    <ItemsControl.ItemsPanel><ItemsPanelTemplate><StackPanel Spacing="2" /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate><DataTemplate x:DataType="vm:NavItemViewModel"><v:NavButton /></DataTemplate></ItemsControl.ItemTemplate>
+                  </ItemsControl>
+                </StackPanel>
+              </StackPanel>
+            </ScrollViewer>
+
+            <!-- Footer: identity + collapse -->
+            <Grid Grid.Row="2" Margin="14,10,14,16">
+              <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+              </Grid.ColumnDefinitions>
+              <StackPanel Grid.Column="0" Margin="12,0,0,0" VerticalAlignment="Center" Spacing="1"
+                          Visibility="{x:Bind v:BindHelpers.Collapsed(ViewModel.IsSidebarCollapsed), Mode=OneWay}">
+                <TextBlock Text="Your desktop." FontSize="12" FontWeight="Medium" Foreground="{ThemeResource LumaTextSecondaryBrush}" />
+                <TextBlock Text="Your atmosphere." FontSize="12" Foreground="{ThemeResource LumaTextTertiaryBrush}" />
+                <TextBlock Text="{x:Bind VersionLabel(ViewModel.Version)}" FontSize="11" Foreground="{ThemeResource LumaTextTertiaryBrush}" Margin="0,6,0,0" />
+              </StackPanel>
+              <StackPanel Grid.Column="1" Spacing="6" VerticalAlignment="Bottom">
+                <Button Style="{StaticResource IconButtonStyle}" Command="{x:Bind ViewModel.ToggleSidebarCommand}" HorizontalAlignment="Center"
+                        ToolTipService.ToolTip="Collapse or expand the sidebar" AutomationProperties.Name="Toggle sidebar">
+                  <c:LucideIcon Data="{StaticResource Icon.PanelLeft}" Size="18" />
+                </Button>
+                <!-- Collapsed sidebar: keep the version visible under the toggle. -->
+                <TextBlock Text="{x:Bind ShortVersionLabel(ViewModel.Version)}" FontSize="10" HorizontalAlignment="Center"
+                           Foreground="{ThemeResource LumaTextTertiaryBrush}"
+                           Visibility="{x:Bind ViewModel.IsSidebarCollapsed, Mode=OneWay}" />
+              </StackPanel>
+            </Grid>
+          </Grid>
+        </Border>
+
+        <!-- ===================== Content ===================== -->
+        <Grid Grid.Column="1">
+          <Grid.RowDefinitions>
+            <!-- Title bar row: the system caption buttons sit at its top-right. -->
+            <RowDefinition Height="56" />
+            <RowDefinition Height="*" />
+          </Grid.RowDefinitions>
+
+          <!-- Page host: one cached view per page view model (see CreatePageView). -->
+          <ContentControl x:Name="PageHost" Grid.Row="1" IsTabStop="False"
+                          HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch" />
+        </Grid>
+      </Grid>
+
+      <!-- Window drag region (SetTitleBar): the top strip across the sidebar identity and the empty title bar row. -->
+      <Border x:Name="TitleBarDragArea" Height="56" VerticalAlignment="Top" Background="Transparent" />
+
+      <!-- ===================== Overlays ===================== -->
+      <Grid x:Name="PreviewHost" Visibility="Collapsed">
+        <v:PreviewOverlay x:Name="Preview" />
+      </Grid>
+
+      <Border x:Name="DialogScrim" Background="{ThemeResource LumaScrimBrush}"
+              Visibility="{x:Bind ViewModel.Dialogs.IsOpen, Mode=OneWay}">
+        <ContentControl x:Name="DialogHost" HorizontalAlignment="Center" VerticalAlignment="Center" IsTabStop="False"
+                        HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch" />
+      </Border>
+
+      <!-- Update card: quiet, top-right, only when there is something to act on -->
+      <Border x:Name="UpdateCard" Style="{StaticResource ToastBorderStyle}" Shadow="{StaticResource OverlayShadow}" Translation="0,0,24"
+              Visibility="{x:Bind ViewModel.Updates.IsCardVisible, Mode=OneWay}"
+              Width="360" Padding="18,16,14,16" Margin="0,64,28,0" HorizontalAlignment="Right" VerticalAlignment="Top">
+        <StackPanel Spacing="12">
+          <Grid ColumnSpacing="12">
+            <Grid.ColumnDefinitions>
+              <ColumnDefinition Width="Auto" />
+              <ColumnDefinition Width="*" />
+              <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <Border x:Name="UpdateBadge" Width="34" Height="34" CornerRadius="10" VerticalAlignment="Top" Background="{ThemeResource LumaAccentBrush}">
+              <Grid>
+                <c:LucideIcon Data="{StaticResource Icon.Sparkle}" Size="17" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"
+                              Visibility="{x:Bind v:BindHelpers.Collapsed(ViewModel.Updates.IsFailed), Mode=OneWay}" />
+                <c:LucideIcon Data="{StaticResource Icon.Alert}" Size="17" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"
+                              Visibility="{x:Bind ViewModel.Updates.IsFailed, Mode=OneWay}" />
+              </Grid>
+            </Border>
+            <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
+              <TextBlock Text="{x:Bind ViewModel.Updates.CardTitle, Mode=OneWay}" FontWeight="SemiBold" FontSize="14" TextWrapping="Wrap" />
+              <TextBlock Text="{x:Bind ViewModel.Updates.VersionText, Mode=OneWay}" Style="{StaticResource SecondaryTextStyle}" FontSize="12" />
+            </StackPanel>
+            <Button Grid.Column="2" Style="{StaticResource IconButtonStyle}" Width="28" Height="28" VerticalAlignment="Top"
+                    Command="{x:Bind ViewModel.Updates.LaterCommand}"
+                    Visibility="{x:Bind v:BindHelpers.Collapsed(ViewModel.Updates.IsRestarting), Mode=OneWay}"
+                    ToolTipService.ToolTip="Remind me later" AutomationProperties.Name="Dismiss update">
+              <c:LucideIcon Data="{StaticResource Icon.Close}" Size="14" />
+            </Button>
+          </Grid>
+
+          <TextBlock Text="{x:Bind ViewModel.Updates.CardMessage, Mode=OneWay}" Style="{StaticResource SecondaryTextStyle}"
+                     Visibility="{x:Bind ViewModel.Updates.HasCardMessage, Mode=OneWay}" TextWrapping="Wrap" LineHeight="19" FontSize="13" />
+
+          <StackPanel Spacing="8" Visibility="{x:Bind ViewModel.Updates.HasReleaseNotes, Mode=OneWay}">
+            <Button Style="{StaticResource LumaButtonStyle}" Padding="6,3" Margin="-6,0,0,0" CornerRadius="7" HorizontalAlignment="Left"
+                    Command="{x:Bind ViewModel.Updates.ToggleNotesCommand}" AutomationProperties.Name="Show what's new">
+              <StackPanel Orientation="Horizontal" Spacing="6">
+                <TextBlock Text="What's new" FontSize="12" FontWeight="Medium" Foreground="{ThemeResource LumaAccentBrush}" VerticalAlignment="Center" />
+                <c:LucideIcon Data="{StaticResource Icon.ChevronDown}" Size="12" Foreground="{ThemeResource LumaAccentBrush}" VerticalAlignment="Center" />
+              </StackPanel>
+            </Button>
+            <Border Visibility="{x:Bind ViewModel.Updates.ShowNotes, Mode=OneWay}" Background="{ThemeResource LumaSurfaceBrush}" CornerRadius="10" Padding="12,10">
+              <ScrollViewer MaxHeight="180" VerticalScrollBarVisibility="Auto">
+                <TextBlock Text="{x:Bind ViewModel.Updates.ReleaseNotes, Mode=OneWay}" IsTextSelectionEnabled="True" TextWrapping="Wrap" FontSize="12" LineHeight="18" />
+              </ScrollViewer>
+            </Border>
+          </StackPanel>
+
+          <StackPanel Spacing="6" Visibility="{x:Bind ViewModel.Updates.IsDownloading, Mode=OneWay}">
+            <ProgressBar Style="{StaticResource LumaProgressBarStyle}" Minimum="0" Maximum="100" Value="{x:Bind ToDouble(ViewModel.Updates.Progress), Mode=OneWay}" Height="4" />
+            <Grid>
+              <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+              </Grid.ColumnDefinitions>
+              <TextBlock Text="{x:Bind ViewModel.Updates.ProgressText, Mode=OneWay}" Style="{StaticResource SecondaryTextStyle}" FontSize="12" VerticalAlignment="Center" />
+              <Button Grid.Column="1" Style="{StaticResource SecondaryButtonStyle}" Content="Cancel" Command="{x:Bind ViewModel.Updates.CancelDownloadCommand}" Padding="12,5" FontSize="12" />
+            </Grid>
+          </StackPanel>
+          <ProgressBar Style="{StaticResource LumaProgressBarStyle}" IsIndeterminate="True" Height="4" Visibility="{x:Bind ViewModel.Updates.IsRestarting, Mode=OneWay}" />
+
+          <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
+            <Button Style="{StaticResource SecondaryButtonStyle}" Content="Later" Command="{x:Bind ViewModel.Updates.LaterCommand}" Visibility="{x:Bind ViewModel.Updates.IsAvailable, Mode=OneWay}" Padding="14,7" FontSize="13" />
+            <Button Style="{StaticResource PrimaryButtonStyle}" Content="Update now" Command="{x:Bind ViewModel.Updates.UpdateNowCommand}" Visibility="{x:Bind ViewModel.Updates.IsAvailable, Mode=OneWay}" Padding="14,7" FontSize="13" />
+            <Button Style="{StaticResource SecondaryButtonStyle}" Content="Later" Command="{x:Bind ViewModel.Updates.LaterCommand}" Visibility="{x:Bind ViewModel.Updates.IsReady, Mode=OneWay}" Padding="14,7" FontSize="13" />
+            <Button Style="{StaticResource PrimaryButtonStyle}" Content="Restart now" Command="{x:Bind ViewModel.Updates.RestartCommand}" Visibility="{x:Bind ViewModel.Updates.IsReady, Mode=OneWay}" Padding="14,7" FontSize="13" />
+            <Button Style="{StaticResource PrimaryButtonStyle}" Content="Try again" Command="{x:Bind ViewModel.Updates.UpdateNowCommand}" Visibility="{x:Bind ViewModel.Updates.CanRetryDownload, Mode=OneWay}" Padding="14,7" FontSize="13" />
+          </StackPanel>
+        </StackPanel>
+      </Border>
+
+      <!-- Toasts: bottom-right corner stack -->
+      <ItemsControl x:Name="ToastStack" ItemsSource="{x:Bind ViewModel.Toasts.Toasts}" IsTabStop="False"
+                    HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,28,28">
+        <ItemsControl.ItemContainerTransitions>
+          <TransitionCollection>
+            <AddDeleteThemeTransition />
+          </TransitionCollection>
+        </ItemsControl.ItemContainerTransitions>
+        <ItemsControl.ItemsPanel><ItemsPanelTemplate><StackPanel Spacing="10" /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+        <ItemsControl.ItemTemplate>
+          <DataTemplate x:DataType="svc:ToastViewModel">
+            <Border Style="{StaticResource ToastBorderStyle}" MinWidth="280" MaxWidth="420" Padding="16,12,10,12" HorizontalAlignment="Right">
+              <Grid ColumnSpacing="12">
+                <Grid.ColumnDefinitions>
+                  <ColumnDefinition Width="Auto" />
+                  <ColumnDefinition Width="*" />
+                  <ColumnDefinition Width="Auto" />
+                  <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <c:LucideIcon Grid.Column="0" Data="{StaticResource Icon.Check}" Size="18" Foreground="{ThemeResource LumaSuccessBrush}" Visibility="{x:Bind IsSuccess}" VerticalAlignment="Center" />
+                <c:LucideIcon Grid.Column="0" Data="{StaticResource Icon.Alert}" Size="18" Foreground="{ThemeResource LumaErrorBrush}" Visibility="{x:Bind IsError}" VerticalAlignment="Center" />
+                <c:LucideIcon Grid.Column="0" Data="{StaticResource Icon.Alert}" Size="18" Foreground="{ThemeResource LumaWarningBrush}" Visibility="{x:Bind IsWarning}" VerticalAlignment="Center" />
+                <c:LucideIcon Grid.Column="0" Data="{StaticResource Icon.Info}" Size="18" Foreground="{ThemeResource LumaAccentBrush}" Visibility="{x:Bind IsInfo}" VerticalAlignment="Center" />
+                <TextBlock Grid.Column="1" Text="{x:Bind Message}" TextWrapping="Wrap" VerticalAlignment="Center" LineHeight="18" />
+                <Button Grid.Column="2" Style="{StaticResource SecondaryButtonStyle}" Content="{x:Bind ActionText}" Command="{x:Bind InvokeCommand}"
+                        Visibility="{x:Bind HasAction}" Padding="12,6" FontSize="12" VerticalAlignment="Center" />
+                <Button Grid.Column="3" Style="{StaticResource IconButtonStyle}" Width="28" Height="28" Command="{x:Bind DismissCommand}"
+                        AutomationProperties.Name="Dismiss" VerticalAlignment="Center">
+                  <c:LucideIcon Data="{StaticResource Icon.Close}" Size="14" />
+                </Button>
+              </Grid>
+            </Border>
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+    </Grid>
+  </UserControl>
+</Window>

@@ -1,0 +1,120 @@
+<ResourceDictionary
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:c="using:Luma.App.Controls">
+
+  <!-- Default (implicit) templates for Luma's templated components. States are driven from code (see Controls/Components.cs). -->
+
+  <!-- ================= EmptyState ================= -->
+  <Style TargetType="c:EmptyState">
+    <Setter Property="HorizontalAlignment" Value="Center" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+    <Setter Property="HorizontalContentAlignment" Value="Center" />
+    <Setter Property="IsTabStop" Value="False" />
+    <Setter Property="Template">
+      <Setter.Value>
+        <ControlTemplate TargetType="c:EmptyState">
+          <StackPanel x:Name="LayoutRoot" Spacing="14" MaxWidth="380" HorizontalAlignment="Center">
+            <VisualStateManager.VisualStateGroups>
+              <VisualStateGroup x:Name="DangerStates">
+                <VisualState x:Name="Normal" />
+                <VisualState x:Name="Danger">
+                  <VisualState.Setters>
+                    <Setter Target="Badge.Background" Value="{ThemeResource LumaErrorSubtleBrush}" />
+                    <Setter Target="BadgeIcon.Foreground" Value="{ThemeResource LumaErrorBrush}" />
+                  </VisualState.Setters>
+                </VisualState>
+              </VisualStateGroup>
+            </VisualStateManager.VisualStateGroups>
+            <Border x:Name="Badge" Width="64" Height="64" CornerRadius="22" HorizontalAlignment="Center"
+                    Background="{ThemeResource LumaAccentSubtleBrush}">
+              <c:LucideIcon x:Name="BadgeIcon" Data="{TemplateBinding Icon}" Size="28"
+                            Foreground="{ThemeResource LumaAccentBrush}"
+                            HorizontalAlignment="Center" VerticalAlignment="Center" />
+            </Border>
+            <TextBlock Text="{TemplateBinding Heading}" FontSize="19" FontWeight="SemiBold"
+                       Foreground="{ThemeResource LumaTextPrimaryBrush}"
+                       HorizontalAlignment="Center" TextAlignment="Center" TextWrapping="Wrap" />
+            <TextBlock Text="{TemplateBinding Message}" FontSize="13"
+                       Foreground="{ThemeResource LumaTextSecondaryBrush}"
+                       HorizontalAlignment="Center" TextAlignment="Center" TextWrapping="Wrap" LineHeight="20" />
+            <ContentPresenter Content="{TemplateBinding Content}"
+                              ContentTemplate="{TemplateBinding ContentTemplate}"
+                              Foreground="{ThemeResource LumaTextPrimaryBrush}"
+                              HorizontalAlignment="Center" Margin="0,6,0,0" />
+          </StackPanel>
+        </ControlTemplate>
+      </Setter.Value>
+    </Setter>
+  </Style>
+
+  <!-- ================= SettingRow ================= -->
+  <Style TargetType="c:SettingRow">
+    <Setter Property="Padding" Value="20,15" />
+    <Setter Property="HorizontalAlignment" Value="Stretch" />
+    <Setter Property="HorizontalContentAlignment" Value="Right" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
+    <Setter Property="IsTabStop" Value="False" />
+    <Setter Property="Template">
+      <Setter.Value>
+        <ControlTemplate TargetType="c:SettingRow">
+          <Border x:Name="Row" Padding="{TemplateBinding Padding}" BorderThickness="0,0,0,1"
+                  BorderBrush="{ThemeResource LumaBorderSubtleBrush}">
+            <VisualStateManager.VisualStateGroups>
+              <VisualStateGroup x:Name="LayoutStates">
+                <VisualState x:Name="Inline" />
+                <VisualState x:Name="Stacked">
+                  <VisualState.Setters>
+                    <Setter Target="Right.(Grid.Column)" Value="0" />
+                    <Setter Target="Right.(Grid.Row)" Value="1" />
+                    <Setter Target="Right.(Grid.ColumnSpan)" Value="2" />
+                    <Setter Target="Right.HorizontalAlignment" Value="Stretch" />
+                    <Setter Target="Right.HorizontalContentAlignment" Value="Stretch" />
+                    <Setter Target="Right.Margin" Value="0,12,0,0" />
+                  </VisualState.Setters>
+                </VisualState>
+              </VisualStateGroup>
+              <VisualStateGroup x:Name="DescriptionStates">
+                <VisualState x:Name="WithDescription" />
+                <VisualState x:Name="NoDescription">
+                  <VisualState.Setters>
+                    <Setter Target="DescriptionText.Visibility" Value="Collapsed" />
+                  </VisualState.Setters>
+                </VisualState>
+              </VisualStateGroup>
+              <VisualStateGroup x:Name="SeparatorStates">
+                <VisualState x:Name="WithSeparator" />
+                <VisualState x:Name="NoSeparator">
+                  <VisualState.Setters>
+                    <Setter Target="Row.BorderThickness" Value="0" />
+                  </VisualState.Setters>
+                </VisualState>
+              </VisualStateGroup>
+            </VisualStateManager.VisualStateGroups>
+            <Grid ColumnSpacing="24">
+              <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+              </Grid.ColumnDefinitions>
+              <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+              </Grid.RowDefinitions>
+              <StackPanel Grid.Column="0" Spacing="3" VerticalAlignment="Center">
+                <TextBlock Text="{TemplateBinding Heading}" FontWeight="Medium" FontSize="13" TextWrapping="Wrap"
+                           Foreground="{ThemeResource LumaTextPrimaryBrush}" />
+                <TextBlock x:Name="DescriptionText" Text="{TemplateBinding Description}" FontSize="12" TextWrapping="Wrap"
+                           LineHeight="18" Foreground="{ThemeResource LumaTextSecondaryBrush}" />
+              </StackPanel>
+              <ContentPresenter x:Name="Right" Grid.Column="1"
+                                Content="{TemplateBinding Content}"
+                                ContentTemplate="{TemplateBinding ContentTemplate}"
+                                Foreground="{ThemeResource LumaTextPrimaryBrush}"
+                                HorizontalAlignment="Right" VerticalAlignment="Center" />
+            </Grid>
+          </Border>
+        </ControlTemplate>
+      </Setter.Value>
+    </Setter>
+  </Style>
+</ResourceDictionary>

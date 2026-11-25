@@ -1,0 +1,50 @@
+<UserControl
+    x:Class="Luma.App.Views.CollectionPickerDialogView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:c="using:Luma.App.Controls"
+    xmlns:v="using:Luma.App.Views"
+    IsTabStop="False">
+
+  <!-- ViewModel: CollectionPickerDialogViewModel. Rows are built in code-behind (CollectionChoiceViewModel exposes a Core
+       model with required members, which must stay off XAML-visible surfaces). -->
+  <Border Style="{StaticResource PopupBorderStyle}" Width="460" Padding="28" CornerRadius="20" Background="{ThemeResource LumaDialogBrush}"
+          Translation="0,0,40">
+    <Border.Shadow>
+      <ThemeShadow />
+    </Border.Shadow>
+    <StackPanel Spacing="18">
+      <StackPanel Spacing="4">
+        <TextBlock Text="Add to collection" FontSize="18" FontWeight="SemiBold" />
+        <TextBlock x:Name="WallpaperTitle" Style="{StaticResource MetaTextStyle}" TextTrimming="CharacterEllipsis" />
+      </StackPanel>
+
+      <Grid>
+        <ScrollViewer MaxHeight="280" VerticalScrollBarVisibility="Auto" HorizontalScrollMode="Disabled"
+                      Visibility="{x:Bind v:BindHelpers.Collapsed(ViewModel.IsEmpty), Mode=OneWay}">
+          <StackPanel x:Name="ChoicesPanel" Spacing="4" />
+        </ScrollViewer>
+        <TextBlock Text="You don't have any collections yet. Create your first one below." Style="{StaticResource SecondaryTextStyle}" TextWrapping="Wrap"
+                   Visibility="{x:Bind ViewModel.IsEmpty, Mode=OneWay}" />
+      </Grid>
+
+      <Grid ColumnSpacing="10">
+        <Grid.ColumnDefinitions>
+          <ColumnDefinition Width="*" />
+          <ColumnDefinition Width="Auto" />
+        </Grid.ColumnDefinitions>
+        <TextBox x:Name="NewNameBox" Text="{x:Bind ViewModel.NewName, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                 PlaceholderText="New collection name" MaxLength="120" KeyDown="OnNewNameKeyDown" AutomationProperties.Name="New collection name" />
+        <Button Grid.Column="1" Style="{StaticResource SecondaryButtonStyle}" Command="{x:Bind ViewModel.CreateCommand}">
+          <StackPanel Orientation="Horizontal" Spacing="6">
+            <c:LucideIcon Data="{StaticResource Icon.Plus}" Size="16" VerticalAlignment="Center" /><TextBlock Text="Create" VerticalAlignment="Center" />
+          </StackPanel>
+        </Button>
+      </Grid>
+      <TextBlock Text="{x:Bind ViewModel.Error, Mode=OneWay}" Foreground="{ThemeResource LumaErrorBrush}" TextWrapping="Wrap"
+                 Visibility="{x:Bind v:BindHelpers.VisibleIfNotEmpty(ViewModel.Error), Mode=OneWay}" />
+
+      <Button Style="{StaticResource PrimaryButtonStyle}" Content="Done" Command="{x:Bind ViewModel.DoneCommand}" HorizontalAlignment="Right" />
+    </StackPanel>
+  </Border>
+</UserControl>

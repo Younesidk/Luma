@@ -1,0 +1,46 @@
+<UserControl
+    x:Class="Luma.App.Views.CollectionCard"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:c="using:Luma.App.Controls"
+    IsTabStop="False">
+
+  <!-- DataContext / ViewModel: CollectionCardViewModel. Owner (CollectionsViewModel) is set by CollectionsView. -->
+  <Button x:Name="CardButton" Style="{StaticResource CardButtonStyle}" Padding="0" CornerRadius="18" Background="Transparent"
+          HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch"
+          Click="OnOpenClick" AutomationProperties.Name="{x:Bind ViewModel.Name, Mode=OneTime}">
+    <Button.ContextFlyout>
+      <MenuFlyout>
+        <MenuFlyoutItem Text="Open" Click="OnOpenClick" />
+        <MenuFlyoutItem Text="Edit…" Click="OnEditClick" />
+        <MenuFlyoutItem Text="Delete collection…" Click="OnDeleteClick" />
+      </MenuFlyout>
+    </Button.ContextFlyout>
+    <StackPanel Spacing="12">
+      <Grid Height="180" CornerRadius="18" Background="{ThemeResource LumaSurfaceBrush}" BorderBrush="{ThemeResource LumaBorderSubtleBrush}" BorderThickness="1">
+        <c:LucideIcon Data="{StaticResource Icon.Layers}" Size="34" Foreground="{ThemeResource LumaTextTertiaryBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"
+                      Visibility="{x:Bind ViewModel.IsEmpty, Mode=OneTime, FallbackValue=Collapsed}" />
+        <c:ThumbnailImage Source="{x:Bind ViewModel.Cover1, Mode=OneTime}" DecodeWidth="520" CornerRadius="17"
+                          Visibility="{x:Bind ViewModel.HasSingleCover, Mode=OneTime, FallbackValue=Collapsed}" />
+        <Grid Visibility="{x:Bind ViewModel.HasMosaic, Mode=OneTime, FallbackValue=Collapsed}">
+          <Grid.RowDefinitions>
+            <RowDefinition Height="*" />
+            <RowDefinition Height="*" />
+          </Grid.RowDefinitions>
+          <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="*" />
+          </Grid.ColumnDefinitions>
+          <c:ThumbnailImage Source="{x:Bind ViewModel.Cover1, Mode=OneTime}" Margin="0,0,1,1" DecodeWidth="280" CornerRadius="17,0,0,0" />
+          <c:ThumbnailImage Grid.Column="1" Source="{x:Bind ViewModel.Cover2, Mode=OneTime}" Margin="1,0,0,1" DecodeWidth="280" CornerRadius="0,17,0,0" />
+          <c:ThumbnailImage Grid.Row="1" Source="{x:Bind ViewModel.Cover3, Mode=OneTime}" Margin="0,1,1,0" DecodeWidth="280" CornerRadius="0,0,0,17" />
+          <c:ThumbnailImage Grid.Row="1" Grid.Column="1" Source="{x:Bind ViewModel.Cover4, Mode=OneTime}" Margin="1,1,0,0" DecodeWidth="280" CornerRadius="0,0,17,0" />
+        </Grid>
+      </Grid>
+      <StackPanel Spacing="2" Margin="4,0,4,0">
+        <TextBlock Text="{x:Bind ViewModel.Name, Mode=OneTime}" FontSize="15" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+        <TextBlock Text="{x:Bind ViewModel.CountText, Mode=OneTime}" Style="{StaticResource MetaTextStyle}" />
+      </StackPanel>
+    </StackPanel>
+  </Button>
+</UserControl>

@@ -1,5 +1,5 @@
-using Avalonia.Controls;
-using Avalonia.Platform.Storage;
+using Microsoft.UI.Xaml;
+using Windows.Storage.Pickers;
 
 namespace Luma.App.Services;
 
@@ -12,42 +12,58 @@ public interface IFileDialogService
     Task<string?> PickFolderAsync(string title);
 }
 
-/// <summary>Opens the platform's native file/folder pickers for the main window.</summary>
+/// <summary>Opens the native file/folder pickers, owned by the main window (unpackaged apps must pass the HWND).</summary>
 public sealed class FileDialogService : IFileDialogService
 {
-    public TopLevel? Owner { get; set; }
+    private static readonly string[] ImageExtensions = [".jpg", ".jpeg", ".png", ".webp", ".bmp", ".gif"];
+
+    public Window? Owner { get; set; }
 
     public async Task<IReadOnlyList<string>> PickImagesAsync()
     {
-        if (Owner?.StorageProvider is not { CanOpen: true } storage) return [];
-        var files = await storage.OpenFilePickerAsync(new FilePickerOpenOptions
+        if (OwnerHandle() is not { } hwnd) return [];
+        var picker = new FileOpenPicker
         {
-            Title = "Import wallpapers",
-            AllowMultiple = true,
-            FileTypeFilter =
-            [
-                new FilePickerFileType("Images") { Patterns = ["*.jpg", "*.jpeg", "*.png", "*.webp", "*.bmp", "*.gif"] }
-            ]
-        });
-        return files.Select(f => f.TryGetLocalPath()).Where(p => p is not null).Cast<string>().ToList();
+            ViewMode = PickerViewMode.Thumbnail,
+            SuggestedStartLocation = PickerLocationId.PicturesLibrary,
+            CommitButtonText = "Import wallpapers"
+        };
+        foreach (var extension in ImageExtensions) picker.FileTypeFilter.Add(extension);
+        WinRT.Interop.InitializeWithWindow.Initialize(picker, hwnd);
+        var files = await picker.PickMultipleFilesAsync();
+        return files?.Select(f => f.Path).Where(p => !string.IsNullOrEmpty(p)).ToList() ?? [];
     }
 
     public async Task<IReadOnlyList<string>> PickVideosAsync()
     {
-        if (Owner?.StorageProvider is not { CanOpen: true } storage) return [];
-        var files = await storage.OpenFilePickerAsync(new FilePickerOpenOptions
+        if (OwnerHandle() is not { } hwnd) return [];
+        var picker = new FileOpenPicker
         {
-            Title = "Import videos",
-            AllowMultiple = true,
-            FileTypeFilter = [new FilePickerFileType("Videos") { Patterns = Luma.Core.Logic.VideoFileValidator.PickerPatterns }]
-        });
-        return files.Select(f => f.TryGetLocalPath()).Where(p => p is not null).Cast<string>().ToList();
+            ViewMode = PickerViewMode.Thumbnail,
+            SuggestedStartLocation = PickerLocationId.VideosLibrary,
+            CommitButtonText = "Import videos"
+        };
+        foreach (var extension in Luma.Core.Logic.VideoFileValidator.SupportedExtensions) picker.FileTypeFilter.Add(extension);
+        WinRT.Interop.InitializeWithWindow.Initialize(picker, hwnd);
+        var files = await picker.PickMultipleFilesAsync();
+        return files?.Select(f => f.Path).Where(p => !string.IsNullOrEmpty(p)).ToList() ?? [];
     }
 
     public async Task<string?> PickFolderAsync(string title)
     {
-        if (Owner?.StorageProvider is not { CanPickFolder: true } storage) return null;
-        var folders = await storage.OpenFolderPickerAsync(new FolderPickerOpenOptions { Title = title, AllowMultiple = false });
-        return folders.FirstOrDefault()?.TryGetLocalPath();
+        if (OwnerHandle() is not { } hwnd) return null;
+        // The Windows folder picker has no title; the commit button carries the purpose instead.
+        var picker = new FolderPicker { SuggestedStartLocation = PickerLocationId.PicturesLibrary, CommitButtonText = title };
+        picker.FileTypeFilter.Add("*");
+        WinRT.Interop.InitializeWithWindow.Initialize(picker, hwnd);
+        var folder = await picker.PickSingleFolderAsync();
+        return string.IsNullOrEmpty(folder?.Path) ? null : folder.Path;
+    }
+
+    private nint? OwnerHandle()
+    {
+        if (Owner is null) return null;
+        var hwnd = WinRT.Interop.WindowNative.GetWindowHandle(Owner);
+        return hwnd == 0 ? null : hwnd;
     }
 }

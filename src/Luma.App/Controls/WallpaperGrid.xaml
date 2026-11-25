@@ -1,0 +1,58 @@
+<UserControl
+    x:Class="Luma.App.Controls.WallpaperGrid"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:c="using:Luma.App.Controls"
+    IsTabStop="False">
+
+  <ScrollViewer x:Name="Scroller"
+                HorizontalScrollMode="Disabled" HorizontalScrollBarVisibility="Disabled"
+                VerticalScrollMode="Auto" VerticalScrollBarVisibility="Auto"
+                VerticalAnchorRatio="0">
+    <StackPanel x:Name="Body" Padding="{x:Bind GridPadding, Mode=OneWay}">
+      <!-- Optional header (e.g. FeaturedHero); scrolls with the gallery -->
+      <ContentPresenter x:Name="HeaderPresenter" Content="{x:Bind Header, Mode=OneWay}" HorizontalContentAlignment="Stretch" />
+
+      <!-- Skeleton placeholders while the first page loads -->
+      <ItemsRepeater x:Name="SkeletonRepeater" Visibility="{x:Bind ShowSkeletons, Mode=OneWay}">
+        <ItemsRepeater.Layout>
+          <UniformGridLayout x:Name="SkeletonLayout" ItemsStretch="None" ItemsJustification="Start" MinRowSpacing="16" />
+        </ItemsRepeater.Layout>
+        <ItemsRepeater.ItemTemplate>
+          <DataTemplate x:DataType="x:Int32">
+            <Border CornerRadius="14" Style="{StaticResource SkeletonBorderStyle}" />
+          </DataTemplate>
+        </ItemsRepeater.ItemTemplate>
+      </ItemsRepeater>
+
+      <!-- Wallpapers (virtualised: only cards near the viewport are realised) -->
+      <ItemsRepeater x:Name="Repeater" ItemsSource="{x:Bind ItemsSource, Mode=OneWay}"
+                     Visibility="{x:Bind Invert(ShowSkeletons), Mode=OneWay}">
+        <ItemsRepeater.Layout>
+          <UniformGridLayout x:Name="CardLayout" ItemsStretch="None" ItemsJustification="Start" MinRowSpacing="16" />
+        </ItemsRepeater.Layout>
+        <ItemsRepeater.ItemTemplate>
+          <DataTemplate>
+            <c:WallpaperCard />
+          </DataTemplate>
+        </ItemsRepeater.ItemTemplate>
+      </ItemsRepeater>
+
+      <!-- Footer -->
+      <Grid MinHeight="64" Margin="0,16,0,0" Visibility="{x:Bind Invert(ShowSkeletons), Mode=OneWay}">
+        <Button Style="{StaticResource SecondaryButtonStyle}" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,4,0,0"
+                Command="{x:Bind LoadMoreCommand, Mode=OneWay}"
+                Visibility="{x:Bind ShowLoadMoreButton, Mode=OneWay}">
+          <StackPanel Orientation="Horizontal" Spacing="8">
+            <c:LucideIcon Data="{StaticResource Icon.ChevronDown}" Size="16" VerticalAlignment="Center" />
+            <TextBlock Text="Load more" VerticalAlignment="Center" />
+          </StackPanel>
+        </Button>
+        <TextBlock Text="You've reached the end" Style="{StaticResource MetaTextStyle}" HorizontalAlignment="Center" VerticalAlignment="Center"
+                   Visibility="{x:Bind ShowEndNote, Mode=OneWay}" />
+        <TextBlock Text="Loading more…" Style="{StaticResource MetaTextStyle}" HorizontalAlignment="Center" VerticalAlignment="Center"
+                   Visibility="{x:Bind IsLoadingMore, Mode=OneWay}" />
+      </Grid>
+    </StackPanel>
+  </ScrollViewer>
+</UserControl>
