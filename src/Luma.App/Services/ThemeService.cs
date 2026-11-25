@@ -139,19 +139,27 @@ public sealed class ThemeService
         }
     }
 
-    /// <summary>Mutates an existing brush instance (so live bindings update) or adds a new one.</summary>
+    /// <summary>
+    /// Mutates an existing brush instance (so live bindings update) or adds a new one. Translucency is baked into the
+    /// colour's alpha with <c>Opacity = 1</c>: a <c>BrushTransition</c> animates only the colour, so a brush that relied on
+    /// <c>Opacity</c> would flash at full strength (e.g. solid white) while a button fades into its hover state.
+    /// </summary>
     private static void SetBrush(ResourceDictionary dictionary, string key, Color color, double opacity, bool createIfMissing)
     {
+        var baked = WithOpacity(color, opacity);
         if (dictionary.TryGetValue(key, out var existing) && existing is SolidColorBrush brush)
         {
-            brush.Color = color;
-            brush.Opacity = opacity;
+            brush.Color = baked;
+            brush.Opacity = 1;
         }
         else if (createIfMissing || dictionary.ContainsKey(key))
         {
-            dictionary[key] = new SolidColorBrush(color) { Opacity = opacity };
+            dictionary[key] = new SolidColorBrush(baked);
         }
     }
+
+    private static Color WithOpacity(Color color, double opacity) =>
+        opacity >= 1 ? color : Color.FromArgb((byte)Math.Round(color.A * Math.Clamp(opacity, 0, 1)), color.R, color.G, color.B);
 
     private static ResourceDictionary? GetOrCreateThemeDictionary(ResourceDictionary resources, string themeKey, bool create)
     {

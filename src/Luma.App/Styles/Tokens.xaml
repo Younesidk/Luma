@@ -51,7 +51,7 @@
       <SolidColorBrush x:Key="LumaElevatedBrush" Color="#202638" />
       <SolidColorBrush x:Key="LumaAccentBrush" Color="#8B7CFF" />
       <SolidColorBrush x:Key="LumaAccentSecondaryBrush" Color="#A99BFF" />
-      <SolidColorBrush x:Key="LumaAccentSubtleBrush" Color="#8B7CFF" Opacity="0.16" />
+      <SolidColorBrush x:Key="LumaAccentSubtleBrush" Color="#298B7CFF" />
       <SolidColorBrush x:Key="LumaOnAccentBrush" Color="#0F1120" />
       <SolidColorBrush x:Key="LumaTextPrimaryBrush" Color="#F3F3FA" />
       <SolidColorBrush x:Key="LumaTextSecondaryBrush" Color="#9299AC" />
@@ -61,11 +61,11 @@
       <SolidColorBrush x:Key="LumaSuccessBrush" Color="#65C99A" />
       <SolidColorBrush x:Key="LumaWarningBrush" Color="#E8B96C" />
       <SolidColorBrush x:Key="LumaErrorBrush" Color="#F07885" />
-      <SolidColorBrush x:Key="LumaSuccessSubtleBrush" Color="#65C99A" Opacity="0.14" />
-      <SolidColorBrush x:Key="LumaWarningSubtleBrush" Color="#E8B96C" Opacity="0.14" />
-      <SolidColorBrush x:Key="LumaErrorSubtleBrush" Color="#F07885" Opacity="0.14" />
-      <SolidColorBrush x:Key="LumaHoverBrush" Color="#FFFFFF" Opacity="0.06" />
-      <SolidColorBrush x:Key="LumaPressedBrush" Color="#FFFFFF" Opacity="0.10" />
+      <SolidColorBrush x:Key="LumaSuccessSubtleBrush" Color="#2465C99A" />
+      <SolidColorBrush x:Key="LumaWarningSubtleBrush" Color="#24E8B96C" />
+      <SolidColorBrush x:Key="LumaErrorSubtleBrush" Color="#24F07885" />
+      <SolidColorBrush x:Key="LumaHoverBrush" Color="#0FFFFFFF" />
+      <SolidColorBrush x:Key="LumaPressedBrush" Color="#1AFFFFFF" />
       <SolidColorBrush x:Key="LumaSkeletonBrush" Color="#1E2434" />
       <SolidColorBrush x:Key="LumaScrimBrush" Color="#0A0C14" Opacity="0.72" />
       <SolidColorBrush x:Key="LumaDialogBrush" Color="#1A1F2E" />
@@ -138,7 +138,7 @@
       <SolidColorBrush x:Key="LumaElevatedBrush" Color="#FFFFFF" />
       <SolidColorBrush x:Key="LumaAccentBrush" Color="#6C5CE7" />
       <SolidColorBrush x:Key="LumaAccentSecondaryBrush" Color="#8A7DF0" />
-      <SolidColorBrush x:Key="LumaAccentSubtleBrush" Color="#6C5CE7" Opacity="0.12" />
+      <SolidColorBrush x:Key="LumaAccentSubtleBrush" Color="#1F6C5CE7" />
       <SolidColorBrush x:Key="LumaOnAccentBrush" Color="#FFFFFF" />
       <SolidColorBrush x:Key="LumaTextPrimaryBrush" Color="#151829" />
       <SolidColorBrush x:Key="LumaTextSecondaryBrush" Color="#5D647A" />
@@ -148,11 +148,11 @@
       <SolidColorBrush x:Key="LumaSuccessBrush" Color="#1D9A63" />
       <SolidColorBrush x:Key="LumaWarningBrush" Color="#B67717" />
       <SolidColorBrush x:Key="LumaErrorBrush" Color="#D0364B" />
-      <SolidColorBrush x:Key="LumaSuccessSubtleBrush" Color="#1D9A63" Opacity="0.12" />
-      <SolidColorBrush x:Key="LumaWarningSubtleBrush" Color="#B67717" Opacity="0.12" />
-      <SolidColorBrush x:Key="LumaErrorSubtleBrush" Color="#D0364B" Opacity="0.10" />
-      <SolidColorBrush x:Key="LumaHoverBrush" Color="#151829" Opacity="0.05" />
-      <SolidColorBrush x:Key="LumaPressedBrush" Color="#151829" Opacity="0.09" />
+      <SolidColorBrush x:Key="LumaSuccessSubtleBrush" Color="#1F1D9A63" />
+      <SolidColorBrush x:Key="LumaWarningSubtleBrush" Color="#1FB67717" />
+      <SolidColorBrush x:Key="LumaErrorSubtleBrush" Color="#1AD0364B" />
+      <SolidColorBrush x:Key="LumaHoverBrush" Color="#0D151829" />
+      <SolidColorBrush x:Key="LumaPressedBrush" Color="#17151829" />
       <SolidColorBrush x:Key="LumaSkeletonBrush" Color="#E7E9F2" />
       <SolidColorBrush x:Key="LumaScrimBrush" Color="#151829" Opacity="0.45" />
       <SolidColorBrush x:Key="LumaDialogBrush" Color="#FFFFFF" />
