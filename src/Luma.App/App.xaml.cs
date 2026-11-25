@@ -229,6 +229,11 @@ public partial class App : Application
             Log.Error(e.Exception, "Unobserved task exception");
             e.SetObserved();
         };
+        // XAML failures that end in a native fail-fast (0xC000027B) never reach UnhandledException; these do get logged.
+        DebugSettings.XamlResourceReferenceFailed += (_, e) => Log.Error("XAML resource reference failed: {Message}", e.Message);
+        DebugSettings.BindingFailed += (_, e) => Log.Warning("XAML binding failed: {Message}", e.Message);
+        if (Environment.GetEnvironmentVariable("LUMA_FIRSTCHANCE") == "1")
+            AppDomain.CurrentDomain.FirstChanceException += (_, e) => Log.Warning(e.Exception, "First-chance exception");
         UnhandledException += (_, e) =>
         {
             Log.Error(e.Exception, "Unhandled UI exception");

@@ -156,20 +156,19 @@ public sealed class ImageLoader
                 setBitmap = source.SetBitmapAsync(bitmap).AsTask();
             });
             await setBitmap!;
-            // SetBitmapAsync copies the pixels into the source's own surface, so the CPU-side bitmap is no longer
-            // needed: freeing it now halves the memory each cached thumbnail costs.
-            var decoded = new DecodedImage(bitmap.PixelWidth, bitmap.PixelHeight, source!, _dispatcher);
-            source = null;
-            return decoded;
+            // The bitmap must outlive the source: XAML reads it again when it re-renders (for example after a device
+            // loss), and a closed bitmap makes it fail-fast with RO_E_CLOSED (0x80000013).
+            return new DecodedImage(bitmap, source!, _dispatcher);
         }
         catch
         {
-            if (source is { } orphan) _dispatcher.Post(orphan.Dispose);
+            var orphan = source;
+            _dispatcher.Post(() =>
+            {
+                orphan?.Dispose();
+                bitmap.Dispose();
+            });
             throw;
-        }
-        finally
-        {
-            bitmap.Dispose();
         }
     }
 
@@ -229,20 +228,27 @@ public sealed class ImageLoader
         public LinkedListNode<Entry> Node { get; set; } = null!;
     }
 
-    /// <summary>The XAML source showing a decoded image; it is freed on the UI thread, exactly once.</summary>
-    internal sealed class DecodedImage(int pixelWidth, int pixelHeight, SoftwareBitmapSource source, IUiDispatcher dispatcher) : IDisposable
+    /// <summary>
+    /// A decoded bitmap and the XAML source showing it. Both are freed together, exactly once, on the UI thread:
+    /// the source first, then the bitmap it reads from.
+    /// </summary>
+    internal sealed class DecodedImage(SoftwareBitmap bitmap, SoftwareBitmapSource source, IUiDispatcher dispatcher) : IDisposable
     {
         private int _disposed;
 
         public SoftwareBitmapSource Source { get; } = source;
-        public int PixelWidth { get; } = pixelWidth;
-        public int PixelHeight { get; } = pixelHeight;
+        public int PixelWidth { get; } = bitmap.PixelWidth;
+        public int PixelHeight { get; } = bitmap.PixelHeight;
 
         public void Dispose()
         {
             if (Interlocked.Exchange(ref _disposed, 1) != 0) return;
             var source = Source;
-            dispatcher.Post(source.Dispose);
+            dispatcher.Post(() =>
+            {
+                source.Dispose();
+                bitmap.Dispose();
+            });
         }
     }
 }
