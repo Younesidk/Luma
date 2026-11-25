@@ -129,9 +129,10 @@ jobs:
           )
           if ("${{ steps.meta.outputs.prerelease }}" -eq "true") { $vpkArgs += "--pre" }
 
-          # GitHub's create-release endpoint sometimes answers "500 Server Error" for a valid request, and vpk does not
-          # retry. Retry a few times, but only from a clean state: an empty draft that a failed attempt left behind is
-          # removed first; anything else (assets uploaded, not a draft, several releases) stops the run as before.
+          # GitHub's release API sometimes answers 500/502 for valid requests (creating the draft or uploading an asset),
+          # and vpk gives up. Retry a few times from a clean state. The validation step proved no release for this tag
+          # existed when the run started, so a DRAFT found now was made by a failed attempt of this run: it is never
+          # public and is deleted (with any assets it got) before retrying. A non-draft release stops the run.
           $maxAttempts = 5
           for ($attempt = 1; ; $attempt++) {
             & dotnet @vpkArgs
@@ -144,8 +145,8 @@ jobs:
             if ($LASTEXITCODE -ne 0) { throw "Could not list releases after a failed upload; nothing was published." }
             $left = @($all | Where-Object { $_.tag_name -eq $tag -or $_.name -eq "Luma $v" })
             foreach ($r in $left) {
-              if (-not $r.draft -or @($r.assets).Count -gt 0) {
-                throw "A failed upload left release id=$($r.id) (draft=$($r.draft), assets=$(@($r.assets).Count)); inspect it on GitHub. Nothing was published."
+              if (-not $r.draft) {
+                throw "Release id=$($r.id) for $tag is not a draft; refusing to touch it. Inspect it on GitHub."
               }
               $deleted = $false
               for ($d = 1; $d -le 5 -and -not $deleted; $d++) {
@@ -153,8 +154,8 @@ jobs:
                 $deleted = $LASTEXITCODE -eq 0
                 if (-not $deleted) { Start-Sleep -Seconds 5 }
               }
-              if (-not $deleted) { throw "Could not remove the empty draft id=$($r.id) left by a failed upload." }
-              Write-Host "Removed empty draft id=$($r.id) left by the failed attempt."
+              if (-not $deleted) { throw "Could not remove draft id=$($r.id) left by a failed upload; delete it on GitHub, then re-run." }
+              Write-Host "Removed draft id=$($r.id) (assets: $(@($r.assets).Count)) left by the failed attempt."
             }
             Start-Sleep -Seconds (15 * $attempt)
           }
