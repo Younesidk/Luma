@@ -112,8 +112,10 @@ jobs:
         shell: pwsh
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           $v = "${{ steps.meta.outputs.version }}"
+          $tag = "v$v"
           # No --publish (draft) and no --merge (never merge into an existing release).
           $vpkArgs = @(
             "vpk", "upload", "github",
@@ -126,8 +128,36 @@ jobs:
             "--token", $env:GITHUB_TOKEN
           )
           if ("${{ steps.meta.outputs.prerelease }}" -eq "true") { $vpkArgs += "--pre" }
-          & dotnet @vpkArgs
-          if ($LASTEXITCODE -ne 0) { throw "vpk upload failed (any partial draft is left on GitHub; nothing was published)." }
+
+          # GitHub's create-release endpoint sometimes answers "500 Server Error" for a valid request, and vpk does not
+          # retry. Retry a few times, but only from a clean state: an empty draft that a failed attempt left behind is
+          # removed first; anything else (assets uploaded, not a draft, several releases) stops the run as before.
+          $maxAttempts = 5
+          for ($attempt = 1; ; $attempt++) {
+            & dotnet @vpkArgs
+            if ($LASTEXITCODE -eq 0) { break }
+            if ($attempt -ge $maxAttempts) { throw "vpk upload failed $maxAttempts times (any partial draft is left on GitHub; nothing was published)." }
+
+            Write-Host "::warning::vpk upload attempt $attempt failed; checking for leftovers before retrying."
+            Start-Sleep -Seconds 10   # let a release created by the failed request show up in the list
+            $all = gh api --paginate "repos/$env:GITHUB_REPOSITORY/releases?per_page=100" | ConvertFrom-Json
+            if ($LASTEXITCODE -ne 0) { throw "Could not list releases after a failed upload; nothing was published." }
+            $left = @($all | Where-Object { $_.tag_name -eq $tag -or $_.name -eq "Luma $v" })
+            foreach ($r in $left) {
+              if (-not $r.draft -or @($r.assets).Count -gt 0) {
+                throw "A failed upload left release id=$($r.id) (draft=$($r.draft), assets=$(@($r.assets).Count)); inspect it on GitHub. Nothing was published."
+              }
+              $deleted = $false
+              for ($d = 1; $d -le 5 -and -not $deleted; $d++) {
+                gh api -X DELETE "repos/$env:GITHUB_REPOSITORY/releases/$($r.id)" | Out-Null
+                $deleted = $LASTEXITCODE -eq 0
+                if (-not $deleted) { Start-Sleep -Seconds 5 }
+              }
+              if (-not $deleted) { throw "Could not remove the empty draft id=$($r.id) left by a failed upload." }
+              Write-Host "Removed empty draft id=$($r.id) left by the failed attempt."
+            }
+            Start-Sleep -Seconds (15 * $attempt)
+          }
 
       - name: Verify the draft has exactly the required assets
         shell: pwsh
