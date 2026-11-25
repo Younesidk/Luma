@@ -184,7 +184,9 @@ public sealed class VideoLibrary : IVideoLibrary
         System.IO.Directory.CreateDirectory(Path.GetDirectoryName(staging)!);
         try
         {
-            var step = progress is null ? null : new Progress<double>(p => progress.Report(0.9 + 0.09 * p));
+            // Forward synchronously: Progress<T> posts each report to the thread pool, so a late 0.945 could arrive
+            // after 0.99 or 1 and make the import bar jump backwards. The caller's own IProgress handles marshalling.
+            var step = progress is null ? null : new ForwardingProgress(p => progress.Report(0.9 + 0.09 * p));
             await _optimizer!.ShrinkAsync(copy, staging, target.Width, target.Height, original.Duration, step, ct);
             var probe = await _probe.ProbeAsync(staging, ct);
             var path = Path.Combine(Directory, baseName + ".mp4");
@@ -425,4 +427,9 @@ public sealed class VideoLibrary : IVideoLibrary
         ImportedAt = row.ImportedAt,
         FileExists = File.Exists(row.FilePath)
     };
+
+    private sealed class ForwardingProgress(Action<double> report) : IProgress<double>
+    {
+        public void Report(double value) => report(value);
+    }
 }
