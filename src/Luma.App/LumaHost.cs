@@ -66,7 +66,7 @@ public static class LumaHost
         services.AddSingleton<UpdateService>();
         services.AddSingleton<IUpdateService>(sp => sp.GetRequiredService<UpdateService>());
         services.AddSingleton<UpdateViewModel>();
-        services.AddHttpClient(FeedbackService.HttpClientName, c => c.Timeout = TimeSpan.FromSeconds(20));
+        services.AddHttpClient(FeedbackService.HttpClientName, c => c.Timeout = TimeSpan.FromSeconds(15));
         services.AddSingleton<FeedbackService>();
 
         services.AddSingleton<DiscoverViewModel>();

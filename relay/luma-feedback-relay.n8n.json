@@ -1,0 +1,59 @@
+{
+  "name": "Luma Feedback Relay",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "luma-feedback",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "id": "5f0c1a52-1d7e-4c7a-9d0e-6a2b9a1c0001",
+      "name": "Luma Feedback (POST)",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [0, 0],
+      "webhookId": "a4b711b0-5a0a-455f-9f9c-8e623a2291d4"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Bouncer: drops anything that isn't a well-formed Luma feedback payload, rate-limits, and builds the Discord embed.\n// Luma sends: { \"type\": \"bug|feature_request|suggestion|other\", \"title\": \"...\", \"description\": \"...\", \"version\": \"2.0.0\", \"os\": \"...\" }\n// Returning [] ends the execution quietly: nothing reaches Discord.\nconst MAX_TITLE = 120;\nconst MAX_DESCRIPTION = 2000;\nconst MAX_BODY = 2600;          // whole JSON body\nconst PER_IP_LIMIT = 5;         // submissions per IP ...\nconst PER_IP_WINDOW_MS = 10 * 60 * 1000;   // ... per 10 minutes\nconst GLOBAL_LIMIT = 30;        // all submissions per hour, in case of a flood from many IPs\nconst GLOBAL_WINDOW_MS = 60 * 60 * 1000;\n\nconst req = $input.first().json;\nconst body = req.body;\nif (!body || typeof body !== 'object' || Array.isArray(body)) return [];\nif (JSON.stringify(body).length > MAX_BODY) return [];\n\nconst str = (v) => (typeof v === 'string' ? v.trim() : '');\nconst types = {\n  bug:             { label: 'Bug report',      color: 0xE5484D },\n  feature_request: { label: 'Feature request', color: 0x3E63DD },\n  suggestion:      { label: 'Suggestion',      color: 0x30A46C },\n  other:           { label: 'Other',           color: 0x8B8D98 }\n};\nconst type = types[str(body.type)];\nconst title = str(body.title);\nconst description = str(body.description);\nconst version = str(body.version).slice(0, 40) || 'unknown';\nconst os = str(body.os).slice(0, 200) || 'unknown';\nif (!type || !title || !description) return [];\nif (title.length > MAX_TITLE || description.length > MAX_DESCRIPTION) return [];\n\n// Rate limit (static data persists between production executions of an active workflow).\nconst store = $getWorkflowStaticData('global');\nconst now = Date.now();\nconst h = req.headers || {};\nconst ip = String(h['cf-connecting-ip'] || h['x-real-ip'] || (h['x-forwarded-for'] || '').split(',')[0] || 'unknown').trim();\nstore.ips = store.ips || {};\nfor (const [k, list] of Object.entries(store.ips)) {\n  const kept = list.filter((t) => now - t < PER_IP_WINDOW_MS);\n  if (kept.length) store.ips[k] = kept; else delete store.ips[k];\n}\nstore.all = (store.all || []).filter((t) => now - t < GLOBAL_WINDOW_MS);\nconst mine = store.ips[ip] || [];\nif (mine.length >= PER_IP_LIMIT || store.all.length >= GLOBAL_LIMIT) return [];\nstore.ips[ip] = [...mine, now];\nstore.all.push(now);\n\nreturn [{\n  json: {\n    discord: {\n      username: 'Luma Feedback',\n      allowed_mentions: { parse: [] },   // user text must never ping @everyone, roles or users\n      embeds: [{\n        title: `[${type.label}] ${title}`,\n        description,\n        color: type.color,\n        fields: [\n          { name: 'Version', value: version, inline: true },\n          { name: 'OS', value: os, inline: true }\n        ],\n        timestamp: new Date().toISOString()\n      }]\n    }\n  }\n}];"
+      },
+      "id": "5f0c1a52-1d7e-4c7a-9d0e-6a2b9a1c0002",
+      "name": "Bouncer (validate + rate limit)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [260, 0]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://discord.com/api/webhooks/PASTE_NEW_WEBHOOK_HERE",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.discord) }}",
+        "options": {
+          "timeout": 10000
+        }
+      },
+      "id": "5f0c1a52-1d7e-4c7a-9d0e-6a2b9a1c0003",
+      "name": "Send to Discord",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [520, 0]
+    }
+  ],
+  "connections": {
+    "Luma Feedback (POST)": {
+      "main": [[{ "node": "Bouncer (validate + rate limit)", "type": "main", "index": 0 }]]
+    },
+    "Bouncer (validate + rate limit)": {
+      "main": [[{ "node": "Send to Discord", "type": "main", "index": 0 }]]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveDataSuccessExecution": "none"
+  },
+  "pinData": {}
+}

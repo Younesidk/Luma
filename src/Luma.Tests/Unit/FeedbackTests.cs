@@ -31,8 +31,8 @@ public class FeedbackTests
         public void Show(string message, ToastKind kind = ToastKind.Info, string? actionText = null, Action? action = null) { }
     }
 
-    private static FeedbackService Service(StubHandler handler, string url = "https://discord.example/api/webhooks/1/x") =>
-        new(new StubFactory(handler), Options.Create(new LumaFeedbackOptions { WebhookUrl = url }), NullLogger<FeedbackService>.Instance);
+    private static FeedbackService Service(StubHandler handler, string? url = "https://relay.example/webhook/luma-feedback") =>
+        new(new StubFactory(handler), Options.Create(new LumaFeedbackOptions { EndpointUrl = url }), NullLogger<FeedbackService>.Instance);
 
     [Fact]
     public void Feedback_page_highlights_the_feedback_sidebar_item()
@@ -42,30 +42,52 @@ public class FeedbackTests
     }
 
     [Fact]
-    public void Payload_has_type_in_title_and_blocks_mentions()
+    public void Payload_matches_the_relay_schema()
     {
-        var payload = FeedbackService.BuildPayload(new FeedbackSubmission(FeedbackType.Bug, "  Crash  ", "@everyone it broke"), "1.1.0", "Windows");
-        Assert.Empty(payload.AllowedMentions.Parse);
-        var embed = Assert.Single(payload.Embeds);
-        Assert.Equal("[Bug report] Crash", embed.Title);
-        Assert.Equal("@everyone it broke", embed.Description);
-        Assert.Contains(embed.Fields, f => f.Name == "Version" && f.Value == "1.1.0");
+        var payload = FeedbackService.BuildPayload(new FeedbackSubmission(FeedbackType.FeatureRequest, "  Dark mode  ", " please "), "2.0.0", "Windows 11");
+        var json = System.Text.Json.JsonSerializer.Serialize(payload);
+        Assert.Equal("""{"type":"feature_request","title":"Dark mode","description":"please","version":"2.0.0","os":"Windows 11"}""", json);
     }
 
     [Fact]
-    public void Long_text_is_truncated_to_discord_safe_lengths()
+    public void Long_text_is_truncated_to_what_the_relay_accepts()
     {
         var payload = FeedbackService.BuildPayload(new FeedbackSubmission(FeedbackType.Other, new string('t', 500), new string('d', 9000)), "1", "os");
-        Assert.True(payload.Embeds[0].Description.Length <= FeedbackService.MaxDescriptionLength);
-        Assert.True(payload.Embeds[0].Title.Length <= FeedbackService.MaxTitleLength + 20);
+        Assert.True(payload.Description.Length <= 2000);
+        Assert.True(payload.Title.Length <= 120);
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    [InlineData("not a url")]
+    [InlineData("http://relay.example/insecure")]
+    public async Task Blank_or_invalid_endpoint_disables_feedback_without_sending(string? url)
+    {
+        var handler = new StubHandler(HttpStatusCode.OK);
+        var service = Service(handler, url);
+        Assert.False(service.IsConfigured);
+        Assert.NotNull(await service.SendAsync(new FeedbackSubmission(FeedbackType.Bug, "a", "b")));
+        Assert.Empty(handler.Bodies);
+
+        var vm = new FeedbackViewModel(service, new NullToasts()) { FeedbackTitle = "Title", Description = "Details" };
+        Assert.False(vm.SubmitCommand.CanExecute(null));
+        Assert.NotNull(vm.Error);
     }
 
     [Fact]
-    public async Task Missing_webhook_reports_an_error_without_sending()
+    public async Task Network_failure_is_reported_not_thrown()
     {
-        var handler = new StubHandler(HttpStatusCode.NoContent);
-        Assert.NotNull(await Service(handler, url: "").SendAsync(new FeedbackSubmission(FeedbackType.Bug, "a", "b")));
-        Assert.Empty(handler.Bodies);
+        var service = new FeedbackService(new StubFactory(new ThrowingHandler()),
+            Options.Create(new LumaFeedbackOptions { EndpointUrl = "https://relay.example/x" }), NullLogger<FeedbackService>.Instance);
+        Assert.NotNull(await service.SendAsync(new FeedbackSubmission(FeedbackType.Bug, "a", "b")));
+    }
+
+    private sealed class ThrowingHandler : HttpMessageHandler
+    {
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct) =>
+            throw new HttpRequestException("offline");
     }
 
     [Fact]
@@ -89,7 +111,7 @@ public class FeedbackTests
 
         await vm.SubmitCommand.ExecuteAsync(null);
         Assert.Single(handler.Bodies);
-        Assert.Contains("[Bug report] Title", handler.Bodies[0]);
+        Assert.Contains("\"type\":\"bug\",\"title\":\"Title\"", handler.Bodies[0]);
         Assert.Equal(string.Empty, vm.FeedbackTitle);
         Assert.Null(vm.Error);
 

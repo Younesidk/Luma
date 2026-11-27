@@ -21,6 +21,8 @@ public sealed partial class FeedbackViewModel : PageViewModel
         _time = time ?? TimeProvider.System;
         TypeOptions = Enum.GetValues<FeedbackType>().Select(t => new Option<FeedbackType>(FeedbackService.Label(t), t)).ToList();
         _selectedType = TypeOptions[0];
+        // No relay configured: show why and keep the button disabled instead of failing on submit.
+        if (!feedback.IsConfigured) _error = "Feedback isn't available in this build.";
     }
 
     public override string Title => "Feedback";
@@ -56,7 +58,7 @@ public sealed partial class FeedbackViewModel : PageViewModel
 
     public string SubmitText => IsSending ? "Sending…" : "Send feedback";
 
-    private bool CanSubmit() => !IsSending && !string.IsNullOrWhiteSpace(FeedbackTitle) && !string.IsNullOrWhiteSpace(Description);
+    private bool CanSubmit() => _feedback.IsConfigured && !IsSending && !string.IsNullOrWhiteSpace(FeedbackTitle) && !string.IsNullOrWhiteSpace(Description);
 
     [RelayCommand(CanExecute = nameof(CanSubmit))]
     private async Task SubmitAsync()
