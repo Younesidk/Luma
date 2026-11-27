@@ -13,3 +13,8 @@ TestResults/
 Releases/
 Releases-*/
 luma_wallpaper_providers_report.md
+
+# Velopack / release binaries, wherever they end up (built locally by release.ps1)
+*.nupkg
+*-Setup.exe
+*-Portable.zip
